@@ -1,1 +1,9 @@
 version: "3.7"
+
+services:
+  welcometoggia:
+    build:
+      context: ./
+    ports:
+      - 5000:5000
+      
