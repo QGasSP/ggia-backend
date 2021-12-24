@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv/
 
 *.pyc
@@ -12,3 +13,8 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+=======
+# ignore .ipynb_checkpoints folder
+.ipynb_checkpoints
+
+
