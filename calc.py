@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 ############################
 # user inputs
 year = 2021
-country = "Finland"
+country = "Estonia"
 population = 21000
 ############################
 
@@ -126,37 +126,6 @@ def total_emissions(default_df, country):
     return bus_emissions(default_df, country) + passenger_car_emissions(default_df, country) + metro_emissions(default_df, country) + tram_emissions(default_df, country) + train_emissions(default_df, country) + rail_freight_emissions(default_df, country) + road_freight_emissions(default_df, country) + inland_waterway_freight_emissions(default_df, country)
 
 
-# U1 bar chart
-def U1_bar_chart(chart_labels, chart_values):
-    """
-    Takes a list of labels and a list of values and returns a bar chart
-    """
-    df = pd.DataFrame({'lab': chart_labels, 'val': chart_values})
-    # ax = df.plot.bar(x='lab', y='val', rot=75)#.title('Baseline for')
-    ax = df.plot(kind='bar', figsize=(10, 7))#.bar(x='lab', y='val', rot=75)#.title('Baseline for')
-    # ax.title()#'Baseline for ' + country)
-    return ax
-
-    # plt.bar(range(len(chart_values)), chart_values)#, labels = chart_labels)#(y_pos, performance, align='center', alpha=0.5)
-    # # plt.xticks(y_pos, objects)
-    # # plt.xlabel(chart_labels)
-    # plt.figure(figsize=(10, 7)).legend()
-    # plt.title(f'Baseline for {country}')
-    # plt.show()
-
-
-# U1 pie chart
-def U1_pie_chart(chart_labels, chart_values):
-    """
-    Takes a list of labels and a list of values and returns a pie chart
-    """
-    fig = plt.figure(figsize=(10, 7))
-    plt.pie(chart_values, labels = chart_labels)
-    plt.title(f'Baseline for {country}')
-    fig.legend()
-    plt.show()
-
-
 BUS = bus_emissions(default_df, country)
 PASSENGER_CAR = passenger_car_emissions(default_df, country)
 METRO = metro_emissions(default_df, country)
@@ -167,10 +136,9 @@ ROAD_TRANSPORT = road_freight_emissions(default_df, country)
 TRANSPORT_ON_INLAND_WATERWAYS = inland_waterway_freight_emissions(default_df, country)
 Total_Transport_emissions_per_capita = total_emissions(default_df, country)
 
-print(Total_Transport_emissions_per_capita)
+transport_values_list = [BUS, PASSENGER_CAR, METRO, TRAM, PASSENGER_TRAIN, RAIL_TRANSPORT, ROAD_TRANSPORT, TRANSPORT_ON_INLAND_WATERWAYS, Total_Transport_emissions_per_capita]
 
-transport_values_list = [BUS, PASSENGER_CAR, METRO, TRAM, PASSENGER_TRAIN, RAIL_TRANSPORT, ROAD_TRANSPORT, TRANSPORT_ON_INLAND_WATERWAYS]
+transport_list.append("total")
 
-U1_bar_chart(transport_list, transport_values_list)
-
-U1_pie_chart(transport_list, transport_values_list)
+response_dict = dict(zip(transport_list, transport_values_list))
+print(response_dict)
