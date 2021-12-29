@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 ############################
 # user inputs
 year = 2021
-country = "Finland"
+# country = "Cyprus"
 population = 21000
 ############################
 
@@ -146,7 +146,7 @@ def U1_bar_chart(chart_labels, chart_values):
 
 
 # U1 pie chart
-def U1_pie_chart(chart_labels, chart_values):
+def U1_pie_chart(country, chart_labels, chart_values):
     """
     Takes a list of labels and a list of values and returns a pie chart
     """
@@ -156,21 +156,22 @@ def U1_pie_chart(chart_labels, chart_values):
     fig.legend()
     plt.show()
 
+for country in country_list:
 
-BUS = bus_emissions(default_df, country)
-PASSENGER_CAR = passenger_car_emissions(default_df, country)
-METRO = metro_emissions(default_df, country)
-TRAM = tram_emissions(default_df, country)
-PASSENGER_TRAIN = train_emissions(default_df, country)
-RAIL_TRANSPORT = rail_freight_emissions(default_df, country)
-ROAD_TRANSPORT = road_freight_emissions(default_df, country)
-TRANSPORT_ON_INLAND_WATERWAYS = inland_waterway_freight_emissions(default_df, country)
-Total_Transport_emissions_per_capita = total_emissions(default_df, country)
+    BUS = bus_emissions(default_df, country)
+    PASSENGER_CAR = passenger_car_emissions(default_df, country)
+    METRO = metro_emissions(default_df, country)
+    TRAM = tram_emissions(default_df, country)
+    PASSENGER_TRAIN = train_emissions(default_df, country)
+    RAIL_TRANSPORT = rail_freight_emissions(default_df, country)
+    ROAD_TRANSPORT = road_freight_emissions(default_df, country)
+    TRANSPORT_ON_INLAND_WATERWAYS = inland_waterway_freight_emissions(default_df, country)
+    Total_Transport_emissions_per_capita = total_emissions(default_df, country)
 
-print(Total_Transport_emissions_per_capita)
+    print(Total_Transport_emissions_per_capita)
 
-transport_values_list = [BUS, PASSENGER_CAR, METRO, TRAM, PASSENGER_TRAIN, RAIL_TRANSPORT, ROAD_TRANSPORT, TRANSPORT_ON_INLAND_WATERWAYS]
+    transport_values_list = [BUS, PASSENGER_CAR, METRO, TRAM, PASSENGER_TRAIN, RAIL_TRANSPORT, ROAD_TRANSPORT, TRANSPORT_ON_INLAND_WATERWAYS]
 
-U1_bar_chart(transport_list, transport_values_list)
+    U1_bar_chart(transport_list, transport_values_list)
 
-U1_pie_chart(transport_list, transport_values_list)
+    U1_pie_chart(country, transport_list, transport_values_list)
