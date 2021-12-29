@@ -4,7 +4,7 @@ services:
   ggia-backend:
     container_name: "ggia-backend"
     build:
-      context: ./flaskapp
+      context: .
     ports:
       - "8000:8000"
       
