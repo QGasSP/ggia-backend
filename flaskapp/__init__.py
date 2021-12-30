@@ -1,5 +1,5 @@
 import os
-
+from .calc import calculate_emissions
 from flask import Flask
 
 
@@ -20,5 +20,9 @@ def create_app(test_config=None):
     @app.route('/')
     def hello():
         return 'Welcome to the Greenhouse Gas Impact Assessment'
+
+    @app.route('/calc/emissions')
+    def calculate():
+        return calculate_emissions(2021, "Estonia", 21000)
 
     return app
