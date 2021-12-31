@@ -1,11 +1,14 @@
 import os
 from .calc import calculate_emissions
-from flask import Flask
+from flask import Flask, request, jsonify
+# from flask_cors import CORS
 
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
+
+    # CORS(app)
 
     if test_config is None:
         app.config.from_pyfile('config.py', silent=True)
@@ -21,8 +24,12 @@ def create_app(test_config=None):
     def hello():
         return 'Welcome to the Greenhouse Gas Impact Assessment'
 
-    @app.route('/calc/emissions')
+    @app.route('/calc/emissions', methods=['GET', 'POST'])
     def calculate():
+        # year = request.form["year"]
+        # country = request.form["country"]
+        # population = request.form["population"]
+        # return jsonify(calculate_emissions(year, country, population))
         return calculate_emissions(2021, "Estonia", 21000)
 
     return app
