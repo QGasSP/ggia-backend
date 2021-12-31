@@ -1,14 +1,12 @@
+from flask import Flask, request, jsonify
 import os
 from .calc import calculate_emissions
-from flask import Flask, request, jsonify
-# from flask_cors import CORS
+
 
 
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
-
-    # CORS(app)
 
     if test_config is None:
         app.config.from_pyfile('config.py', silent=True)
