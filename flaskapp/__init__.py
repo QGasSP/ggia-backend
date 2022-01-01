@@ -1,7 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask
 import os
-from .calc import calculate_emissions
-
+from .calc import blue_print
 
 
 def create_app(test_config=None):
@@ -18,16 +17,10 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    app.register_blueprint(calc.blue_print)
+
     @app.route('/')
     def hello():
         return 'Welcome to the Greenhouse Gas Impact Assessment'
-
-    @app.route('/calc/emissions', methods=['GET', 'POST'])
-    def calculate():
-        # year = request.form["year"]
-        # country = request.form["country"]
-        # population = request.form["population"]
-        # return jsonify(calculate_emissions(year, country, population))
-        return calculate_emissions(2021, "Estonia", 21000)
 
     return app

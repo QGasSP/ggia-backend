@@ -1,17 +1,30 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+from flask import Blueprint, jsonify
+from flask import request
 
-def calculate_emissions(year, country, population):
+blue_print = Blueprint("calc", __name__, url_prefix="/calc")
+
+
+@blue_print.route("emission", methods=["GET", "POST"])
+def calculate_emissions():
     """
-    This function takes a dataframe of default values and a country in the list of 32 EU countries and calculates the emissions for buses, passenger cars, metros, trams, passenger trains, rail freight, road freight and inland waterways freight and stores it as a dictionary that Flask will return as a JSON object
+    This function takes a dataframe of default values and a country in the list of 32 EU countries and calculates the
+    emissions for buses, passenger cars, metros, trams, passenger trains, rail freight, road freight and inland
+    waterways freight and stores it as a dictionary that Flask will return as a JSON object
     """
+
+    country = request.json["country"]
 
     # default variables
     million = 1000000
 
-    country_list = ['Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein', 'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'UK']
+    country_list = ['Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland',
+                    'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein',
+                    'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania',
+                    'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'UK']
 
-    transport_list = ['Motor coaches, buses and trolley buses', 'Passenger cars', 'Metro', 'Tram, light train', 'Passenger trains', 'Rail freight', 'Road freight', 'Inland waterways freight', 'total']
+    transport_list = ['Motor coaches, buses and trolley buses', 'Passenger cars', 'Metro', 'Tram, light train',
+                      'Passenger trains', 'Rail freight', 'Road freight', 'Inland waterways freight', 'total']
 
     transport_values_list = []
 
@@ -32,7 +45,8 @@ def calculate_emissions(year, country, population):
     PASSENGER_CAR_PASSENGER_KM_PER_CAPITA = default_df.iat[country_list.index(country), 4]
     PASSENGER_CAR_AVERAGE_CAR_OCCUPANCY = default_df.iat[country_list.index(country), 5]
     PASSENGER_CAR_AVERAGE_EMISSION_FACTOR = default_df.iat[country_list.index(country), 6]
-    passenger_car = PASSENGER_CAR_PASSENGER_KM_PER_CAPITA/PASSENGER_CAR_AVERAGE_CAR_OCCUPANCY*PASSENGER_CAR_AVERAGE_EMISSION_FACTOR/million
+    passenger_car = PASSENGER_CAR_PASSENGER_KM_PER_CAPITA / PASSENGER_CAR_AVERAGE_CAR_OCCUPANCY * \
+        PASSENGER_CAR_AVERAGE_EMISSION_FACTOR / million
     transport_values_list.append(passenger_car)
 
     # metro
@@ -69,7 +83,8 @@ def calculate_emissions(year, country, population):
     # inland waterways
     INLAND_WATERWAYS_TRANSPORT_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 20]
     INLAND_WATERWAYS_TRANSPORT_EMISSION_FACTOR = default_df.iat[country_list.index(country), 21]
-    inland_waterways = INLAND_WATERWAYS_TRANSPORT_VEHICLE_KM_PER_CAPITA*INLAND_WATERWAYS_TRANSPORT_EMISSION_FACTOR/million
+    inland_waterways = INLAND_WATERWAYS_TRANSPORT_VEHICLE_KM_PER_CAPITA * INLAND_WATERWAYS_TRANSPORT_EMISSION_FACTOR \
+        / million
     transport_values_list.append(inland_waterways)
 
     # total
@@ -78,7 +93,4 @@ def calculate_emissions(year, country, population):
 
     total_emissions_dict = dict(zip(transport_list, transport_values_list))
 
-    return total_emissions_dict
-
-
-print(calculate_emissions(2021, "Estonia", 21000))
+    return jsonify(total_emissions_dict)
