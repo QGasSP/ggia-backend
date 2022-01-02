@@ -1,10 +1,11 @@
 from flask import Flask
-import os
+from flask_migrate import Migrate
 from .calc import blue_print
+from .models import db, Country, VehicleInfo
+import os
 
 
 def create_app(test_config=None):
-    # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
 
     if test_config is None:
@@ -16,6 +17,12 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:postgres@localhost:5432/ggia-backend"
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
 
     app.register_blueprint(calc.blue_print)
 
