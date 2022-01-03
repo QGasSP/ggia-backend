@@ -94,3 +94,4 @@ def calculate_emissions():
     total_emissions_dict = dict(zip(transport_list, transport_values_list))
 
     return jsonify(total_emissions_dict)
+
