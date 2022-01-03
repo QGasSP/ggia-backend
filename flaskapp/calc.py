@@ -28,8 +28,8 @@ def calculate_emissions():
 
     transport_values_list = []
 
-    default_df = pd.read_csv('CSV files/Transport_simplified dataset CSV.csv', sep=",", encoding = "ANSI", header=1)
-    # ../CSV files/
+    default_df = pd.read_csv('CSVfiles/Transport_simplified dataset CSV.csv', sep=",", encoding = "ANSI", header=1)
+    # ../CSVfiles/
 
     # replace any missing values in the dataframe with 0, which is what Kimmo's Excel sheet would do
     default_df.fillna(0, inplace=True)
