@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_migrate import Migrate
 from .calc import blue_print
-from .models import db, Country, VehicleInfo
+from .models import db, Country, TransportMode
 import os
 
 

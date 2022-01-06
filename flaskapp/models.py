@@ -19,7 +19,7 @@ class Country(db.Model):
 
 
 class TransportMode(db.Model):
-    __tablename__ = "vehicle_infos"
+    __tablename__ = "transport_modes"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
