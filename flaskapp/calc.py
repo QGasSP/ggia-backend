@@ -30,12 +30,14 @@ def calculate_emissions():
 
     transport_values_list = []
 
-    default_df = pd.read_csv('../CSVfiles/Transport_simplified dataset CSV.csv', sep=",", header=1)
+    default_df = pd.read_csv('CSVfiles/Transport_simplified dataset CSV.csv', sep=",", header=1)
+    # default_df = pd.read_csv('../CSVfiles/Transport_simplified dataset CSV.csv', sep=",", header=1)
 
     # replace any missing values in the dataframe with 0, which is what Kimmo's Excel sheet would do
     default_df.fillna(0, inplace=True)
 
-    weights_df = pd.read_csv('../CSVfiles/weighting-factors-CSV.csv', sep=",")
+    # weights_df = pd.read_csv('../CSVfiles/weighting-factors-CSV.csv', sep=",")
+    weights_df = pd.read_csv('CSVfiles/weighting-factors-CSV.csv', sep=",")
 
     # Using a dummy dictionary for the settlement selection in the cell below
     # This will later be replaced by the user's selection from the FE in the form of a JSON object
@@ -43,6 +45,7 @@ def calculate_emissions():
 
     settlement_df = pd.DataFrame.from_dict(settlement_dict, orient="index")
 
+    # vlookup calculation from Excel to calculate correction factors
     correction_factors = []
     for col in weights_df.columns:
         correction_factors.append(np.dot(weights_df[col], settlement_df.iloc[:, 0:1].stack())/np.sum(settlement_df)[0])
