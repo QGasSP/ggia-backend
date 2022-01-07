@@ -8,22 +8,18 @@ class Country(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
-    population = db.Column(db.Integer)
-    year = db.Column(db.Integer)
 
-    vehicle_infos = db.relationship("VehicleInfo")
+    transport_modes = db.relationship("TransportMode")
 
-    def __init__(self, name, population, year):
+    def __init__(self, name):
         self.name = name
-        self.population = population
-        self.year = year
 
     def __repr__(self):
-        return f"{self.name}:{self.population}:{self.year}"
+        return f"{self.name}"
 
 
-class VehicleInfo(db.Model):
-    __tablename__ = "vehicle_infos"
+class TransportMode(db.Model):
+    __tablename__ = "transport_modes"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
