@@ -1,15 +1,6 @@
 version: "3.7"
 
 services:
-  ggia-backend:
-    container_name: "ggia-backend"
-    build:
-      context: .
-    ports:
-      - "8000:8000"
-    depends_on:
-      - ggia-postgres
-
   ggia-postgres:
     container_name: "ggia-db"
     image: docker.io/bitnami/postgresql:11
@@ -20,8 +11,18 @@ services:
     environment:
       - POSTGRESQL_PASSWORD=postgres
       - POSTGRESQL_USER=postgres
-      - POSTGRESQL_DATABASE=postgres
+      - POSTGRESQL_DATABASE=ggia-backend
     restart: always
+
+  ggia-backend:
+    container_name: "ggia-backend"
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ggia-postgres
+    restart: on-failure
 
 volumes:
   postgresql_data:

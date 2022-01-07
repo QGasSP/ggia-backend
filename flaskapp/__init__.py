@@ -18,7 +18,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:postgres@localhost:5432/ggia-backend"
+    app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:postgres@ggia-postgres:5432/ggia-backend"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
