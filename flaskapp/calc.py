@@ -14,8 +14,8 @@ def calculate_emissions():
     waterways freight and stores it as a dictionary that Flask will return as a JSON object
     """
 
-    # country = request.json["country"]
-    country = "Estonia"
+    country = request.json["country"]
+    # country = "Estonia"
 
     # default variables
     million = 1000000
@@ -110,4 +110,3 @@ def calculate_emissions():
     # return jsonify(total_emissions_dict)
     return total_emissions_dict
 
-print(calculate_emissions())
