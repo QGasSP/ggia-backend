@@ -25,7 +25,7 @@ def calculate_emissions():
                     'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania',
                     'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'UK']
 
-    transport_list = ['motor_coaches, buses_and_trolley_buses', 'passenger_cars', 'metro', 'tram_light_train',
+    transport_list = ['motor_coaches_buses_and_trolley_buses', 'passenger_cars', 'metro', 'tram_light_train',
                       'passenger_trains', 'rail_freight', 'road_freight', 'inland_waterways_freight', 'total']
 
     transport_values_list = []
