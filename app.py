@@ -4,4 +4,4 @@ from flask_cors import CORS
 cli = create_app()
 
 if __name__ == "__main__":
-    CORS(create_app().run())
+    cli.run()
