@@ -1,9 +1,10 @@
 from flask import Flask
 from flask_migrate import Migrate
+from flask_cors import CORS
+import os
 from .calc import blue_print
 from .models import db, Country, TransportMode
-import os
-from flask_cors import CORS
+from .config import *
 
 
 def create_app(test_config=None):
@@ -20,7 +21,13 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://postgres:postgres@ggia-postgres:5432/ggia-backend"
+    if app.config.get("ENV") == "development":
+        app.config.from_object(DevelopmentConfig())
+    elif app.config.get("ENV") == "production":
+        app.config.from_object(ProductionConfig())
+    else:
+        app.config.from_object(Config())
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
