@@ -37,3 +37,20 @@ class TransportMode(db.Model):
 
     def __repr__(self):
         return f"{self.name}:{self.emission_factor_per_km}:{self.average_occupancy}:{self.passenger_km_per_person}"
+
+
+class Settlement_Weights(db.Model):
+    __tablename__ = 'settlement_weights'
+
+    # id = db.Column(db.Integer, primary_key=True)
+    transit_mode = db.Column(db.String, primary_key=True)
+    settlement_type = db.Column(db.String, primary_key=True)
+    settlement_weight = db.Column(db.Integer)
+
+    # transport_modes = db.relationship("TransportMode")
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return f"{self.name}"

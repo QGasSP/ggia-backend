@@ -43,3 +43,12 @@ def fetch_transport_modes(filename):
             count = count + 1
 
     return transport_modes
+
+
+def fetch_weights(filename):
+    data = pd.read_csv(filename, sep=",", header=1)
+    data.fillna(0, inplace=True)
+
+    # country_list = list(data['country'])
+
+    # return [{'id': i, 'name': country_list[i]} for i in range(len(country_list))]
