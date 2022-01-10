@@ -12,12 +12,12 @@ blue_print = Blueprint("calc", __name__, url_prefix="/calc")
 
 def calculate_emission(transport_mode, correction_factor):
     if transport_mode.name in CALCULATE_WITHOUT_EMISSION_0:
-        return transport_mode.passenger_km_per_person * transport_mode.average_occupancy / MILLION
+        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
     elif transport_mode.name in CALCULATE_WITHOUT_EMISSION_1:
-        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION
+        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
     else:
-        return transport_mode.passenger_km_per_person / transport_mode.emission_factor_per_km * \
-               transport_mode.average_occupancy / MILLION
+        return transport_mode.passenger_km_per_person / transport_mode.average_occupancy * \
+            transport_mode.emission_factor_per_km / MILLION * correction_factor
 
 
 @blue_print.route("emission", methods=["GET", "POST"])
