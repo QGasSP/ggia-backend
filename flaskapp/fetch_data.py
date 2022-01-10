@@ -1,5 +1,5 @@
 import pandas as pd
-from env import *
+from .env import *
 
 
 def fetch_countries(filename):
@@ -35,7 +35,10 @@ def fetch_transport_modes(filename):
             if len(transport) > 1 and transport[1] in data.columns:
                 transport_mode['passenger_km_per_person'] = float(data[transport[1]][country_list[i]["id"]])
             if len(transport) > 2 and transport[2] in data.columns:
-                transport_mode['average_occupancy'] = float(data[transport[2]][country_list[i]["id"]])
+                if transport[0] in CALCULATE_WITHOUT_EMISSION_1:
+                    transport_mode['emission_factor_per_km'] = float(data[transport[2]][country_list[i]["id"]])
+                else:
+                    transport_mode['average_occupancy'] = float(data[transport[2]][country_list[i]["id"]])
             if len(transport) > 3 and transport[3] in data.columns:
                 transport_mode['emission_factor_per_km'] = float(data[transport[3]][country_list[i]["id"]])
 
@@ -59,7 +62,7 @@ def fetch_weights(filename):
 
 # print(fetch_countries('../CSVfiles/Transport_simplified dataset CSV.csv'))
 # print(fetch_transport_modes('../CSVfiles/Transport_simplified dataset CSV.csv'))
-print(fetch_weights('../CSVfiles/weights.csv'))
+# print(fetch_weights('../CSVfiles/weights.csv'))
 
 
 def print_weights(filename):
@@ -67,4 +70,4 @@ def print_weights(filename):
     data.fillna(0, inplace=True)
     print(data)
 
-print_weights('../CSVfiles/weights.csv')
+# print_weights('../CSVfiles/weights.csv')

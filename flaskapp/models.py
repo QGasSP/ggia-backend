@@ -39,7 +39,7 @@ class TransportMode(db.Model):
         return f"{self.name}:{self.emission_factor_per_km}:{self.average_occupancy}:{self.passenger_km_per_person}"
 
 
-class Settlement_Weights(db.Model):
+class SettlementWeights(db.Model):
     __tablename__ = 'settlement_weights'
 
     id = db.Column(db.Integer, primary_key=True)
