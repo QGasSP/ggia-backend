@@ -1,0 +1,41 @@
+transit_mode,settlement_type,weight
+bus,metropolitan center,2
+car,metropolitan center,0.3
+metro,metropolitan center,3
+tram,metropolitan center,3
+train,metropolitan center,2
+rail freight,metropolitan center,2
+road freight,metropolitan center,2
+inland waterways freight,metropolitan center,2
+bus,urban,1.5
+car,urban,0.7
+metro,urban,0
+tram,urban,2
+train,urban,1.5
+rail freight,urban,2
+road freight,urban,1.5
+inland waterways freight,urban,1
+bus,suburban,1
+car,suburban,1.2
+metro,suburban,0
+tram,suburban,0
+train,suburban,0.7
+rail freight,suburban,1
+road freight,suburban,0.5
+inland waterways freight,suburban,0.5
+bus,town,0.8
+car,town,1.2
+metro,town,0
+tram,town,0
+train,town,0.7
+rail freight,town,1
+road freight,town,1
+inland waterways freight,town,0.7
+bus,rural,0.5
+car,rural,3
+metro,rural,0
+tram,rural,0
+train,rural,0.5
+rail freight,rural,0.5
+road freight,rural,0.5
+inland waterways freight,rural,0.2
