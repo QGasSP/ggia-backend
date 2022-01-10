@@ -1,5 +1,5 @@
 import pandas as pd
-from flaskapp.env import *
+from env import *
 
 
 def fetch_countries(filename):
@@ -49,6 +49,22 @@ def fetch_weights(filename):
     data = pd.read_csv(filename, sep=",", header=1)
     data.fillna(0, inplace=True)
 
-    # country_list = list(data['country'])
+    transit_mode_list = list(data['transit_mode'])
+    settlement_type = list(data['settlement_type'])
+    weight_list = list(data['settlement_weight'])
 
-    # return [{'id': i, 'name': country_list[i]} for i in range(len(country_list))]
+    # return [{'id': i, 'transit_mode': country_list[i], } for i in range(len(country_list))]
+    return [{'transit_mode_settlement_type': transit_mode_list[i] + '_' + settlement_type[i], 'settlement_weight': weight_list[i], } for i in range(len(weight_list))]
+
+
+# print(fetch_countries('../CSVfiles/Transport_simplified dataset CSV.csv'))
+# print(fetch_transport_modes('../CSVfiles/Transport_simplified dataset CSV.csv'))
+print(fetch_weights('../CSVfiles/weights.csv'))
+
+
+def print_weights(filename):
+    data = pd.read_csv(filename, sep=",", header=1)
+    data.fillna(0, inplace=True)
+    print(data)
+
+print_weights('../CSVfiles/weights.csv')

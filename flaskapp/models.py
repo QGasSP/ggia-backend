@@ -42,12 +42,10 @@ class TransportMode(db.Model):
 class Settlement_Weights(db.Model):
     __tablename__ = 'settlement_weights'
 
-    # id = db.Column(db.Integer, primary_key=True)
-    transit_mode = db.Column(db.String, primary_key=True)
-    settlement_type = db.Column(db.String, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    transit_mode = db.Column(db.String)
+    settlement_type = db.Column(db.String)
     settlement_weight = db.Column(db.Integer)
-
-    # transport_modes = db.relationship("TransportMode")
 
     def __init__(self, name):
         self.name = name
