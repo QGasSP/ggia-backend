@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('transit_mode', sa.String(), nullable=True),
     sa.Column('settlement_type', sa.String(), nullable=True),
-    sa.Column('settlement_weight', sa.Integer(), nullable=True),
+    sa.Column('settlement_weight', sa.Float(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

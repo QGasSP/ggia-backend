@@ -3,7 +3,7 @@ import numpy as np
 from flask import Blueprint, jsonify
 from flask import request
 from .models import Country, TransportMode
-from .env import CALCULATE_WITHOUT_EMISSION_0, CALCULATE_WITHOUT_EMISSION_1
+from .env import CALCULATE_WITHOUT_OCCUPANCY_0
 
 MILLION = 1000000
 
@@ -11,9 +11,7 @@ blue_print = Blueprint("calc", __name__, url_prefix="/calc")
 
 
 def calculate_emission(transport_mode, correction_factor):
-    if transport_mode.name in CALCULATE_WITHOUT_EMISSION_0:
-        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
-    elif transport_mode.name in CALCULATE_WITHOUT_EMISSION_1:
+    if transport_mode.name in CALCULATE_WITHOUT_OCCUPANCY_0:
         return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
     else:
         return transport_mode.passenger_km_per_person / transport_mode.average_occupancy * \
