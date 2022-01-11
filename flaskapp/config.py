@@ -3,7 +3,7 @@ class Config(object):
 
 
 class ProductionConfig(object):
-    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:postgres@ggia-postgres::5432/ggia-backend"
+    SQLALCHEMY_DATABASE_URI = "postgresql://postgres:postgres@ggia-postgres:5432/ggia-backend"
 
 
 class DevelopmentConfig(object):
