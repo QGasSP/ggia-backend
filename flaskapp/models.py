@@ -45,7 +45,7 @@ class SettlementWeights(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     transit_mode = db.Column(db.String)
     settlement_type = db.Column(db.String)
-    settlement_weight = db.Column(db.Integer)
+    settlement_weight = db.Column(db.Float)
 
     def __init__(self, name):
         self.name = name
