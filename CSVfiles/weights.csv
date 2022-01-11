@@ -1,12 +1,12 @@
 transit_mode,settlement_type,weight
-bus,metropolitan center,2
-car,metropolitan center,0.3
-metro,metropolitan center,3
-tram,metropolitan center,3
-train,metropolitan center,2
-rail_transport,metropolitan center,2
-road_transport,metropolitan center,2
-waterways_transport,metropolitan center,2
+bus,metropolitan_center,2
+car,metropolitan_center,0.3
+metro,metropolitan_center,3
+tram,metropolitan_center,3
+train,metropolitan_center,2
+rail_transport,metropolitan_center,2
+road_transport,metropolitan_center,2
+waterways_transport,metropolitan_center,2
 bus,urban,1.5
 car,urban,0.7
 metro,urban,0
