@@ -2,12 +2,19 @@ import pandas as pd
 import numpy as np
 from flask import Blueprint, jsonify
 from flask import request
-from .models import Country, TransportMode
+from .models import Country, SettlementWeights, TransportMode
 from .env import CALCULATE_WITHOUT_OCCUPANCY_0
 
 MILLION = 1000000
 
 blue_print = Blueprint("calc", __name__, url_prefix="/calc")
+
+def calculate_correction_factor(settlement_weights, settlement_percentages):
+    summary = 0
+    for settlement in settlement_weights:
+        summary += settlement_percentages[settlement.settlement_type] * settlement.settlement_weight
+    
+    return summary / sum(settlement_percentages.values())
 
 
 def calculate_emission(transport_mode, correction_factor):
@@ -27,26 +34,18 @@ def calculate_emissions():
     """
     emissions = {}
     country_data = Country.query.filter_by(name=request.json["country"]).first()
-    country = country_data.name
-    # country = "Estonia"
-
-    # weights_df = pd.read_csv('../CSVfiles/weighting-factors-CSV.csv', sep=",")
-    weights_df = pd.read_csv('CSVfiles/weighting-factors-CSV.csv', sep=",")
 
     # Using a dummy dictionary for the settlement selection in the cell below
     # This will later be replaced by the user's selection from the FE in the form of a JSON object
-    settlement_dict = {"METROPOLITAN CENTER": 13.3, "URBAN": 17.5, "SUBURBAN": 24.7, "TOWN": 28.9, "RURAL": 16}
+    settlement_dict = request.json["settlement_distribution"]
+    # settlement_dict = {"metropolitan_center": 0, "urban": 0, "suburban": 0, "town": 0, "rural": 0}
+    # validation on FE: the settlement distribution factors cannot sum to zero
 
-    settlement_df = pd.DataFrame.from_dict(settlement_dict, orient="index")
 
-    # vlookup calculation from Excel to calculate correction factors
-    correction_factors = {}
-    for col in weights_df.columns:
-        correction_factors[col] = (np.dot(weights_df[col], settlement_df.iloc[:, 0:1].stack())/np.sum(settlement_df)[0])
-
-    # I wanna map correction_factors. Waiting for Bill...
     for transport_mode in country_data.transport_modes:
-        emissions[transport_mode.name] = calculate_emission(transport_mode, correction_factors[transport_mode.name])
+        settlement_weights = SettlementWeights.query.filter_by(transit_mode=transport_mode.name).all() 
+        correction_factor = calculate_correction_factor(settlement_weights, settlement_dict)
+        emissions[transport_mode.name] = calculate_emission(transport_mode, correction_factor)
 
     emissions["total"] = sum(emissions.values())
 

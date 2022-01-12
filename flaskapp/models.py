@@ -47,8 +47,10 @@ class SettlementWeights(db.Model):
     settlement_type = db.Column(db.String)
     settlement_weight = db.Column(db.Float)
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, transit_mode, settlement_type, settlement_weight):
+        self.transit_mode = transit_mode
+        self.settlement_type = settlement_type
+        self.settlement_weight = settlement_weight
 
     def __repr__(self):
-        return f"{self.name}"
+        return f"{self.transit_mode}:{self.settlement_type}:{self.settlement_weight}"
