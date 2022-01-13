@@ -29,6 +29,7 @@ def create_app(test_config=None):
         app.config.from_object(Config())
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JSON_SORT_KEYS'] = False
 
     db.init_app(app)
     migrate = Migrate(app, db)
