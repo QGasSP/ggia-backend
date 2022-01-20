@@ -1,11 +1,13 @@
 from flask import Flask
+from flask_migrate import Migrate
+from flask_cors import CORS
 import os
 from .calc import blue_print
-from flask_cors import CORS
+from .models import db, Country, TransportMode
+from .config import *
 
 
 def create_app(test_config=None):
-    # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
     CORS(app)
 
@@ -18,6 +20,18 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    if app.config.get("ENV") == "development":
+        app.config.from_object(DevelopmentConfig())
+    elif app.config.get("ENV") == "production":
+        app.config.from_object(ProductionConfig())
+    else:
+        app.config.from_object(Config())
+
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
 
     app.register_blueprint(calc.blue_print)
 

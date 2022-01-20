@@ -2,8 +2,20 @@ import pandas as pd
 import numpy as np
 from flask import Blueprint, jsonify
 from flask import request
+from .models import Country, TransportMode
+from .env import CALCULATE_WITHOUT_OCCUPANCY_0
+
+MILLION = 1000000
 
 blue_print = Blueprint("calc", __name__, url_prefix="/calc")
+
+
+def calculate_emission(transport_mode, correction_factor):
+    if transport_mode.name in CALCULATE_WITHOUT_OCCUPANCY_0:
+        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
+    else:
+        return transport_mode.passenger_km_per_person / transport_mode.average_occupancy * \
+            transport_mode.emission_factor_per_km / MILLION * correction_factor
 
 
 @blue_print.route("emission", methods=["GET", "POST"])
@@ -13,28 +25,10 @@ def calculate_emissions():
     emissions for buses, passenger cars, metros, trams, passenger trains, rail freight, road freight and inland
     waterways freight and stores it as a dictionary that Flask will return as a JSON object
     """
-
-    country = request.json["country"]
+    emissions = {}
+    country_data = Country.query.filter_by(name=request.json["country"]).first()
+    country = country_data.name
     # country = "Estonia"
-
-    # default variables
-    million = 1000000
-
-    country_list = ['Austria', 'Belgium', 'Bulgaria', 'Croatia', 'Cyprus', 'Czechia', 'Denmark', 'Estonia', 'Finland',
-                    'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Italy', 'Latvia', 'Liechtenstein',
-                    'Lithuania', 'Luxembourg', 'Malta', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Romania',
-                    'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'UK']
-
-    transport_list = ['motor_coaches_buses_and_trolley_buses', 'passenger_cars', 'metro', 'tram_light_train',
-                      'passenger_trains', 'rail_freight', 'road_freight', 'inland_waterways_freight', 'total']
-
-    transport_values_list = []
-
-    default_df = pd.read_csv('CSVfiles/Transport_simplified dataset CSV.csv', sep=",", header=1)
-    # default_df = pd.read_csv('../CSVfiles/Transport_simplified dataset CSV.csv', sep=",", header=1)
-
-    # replace any missing values in the dataframe with 0, which is what Kimmo's Excel sheet would do
-    default_df.fillna(0, inplace=True)
 
     # weights_df = pd.read_csv('../CSVfiles/weighting-factors-CSV.csv', sep=",")
     weights_df = pd.read_csv('CSVfiles/weighting-factors-CSV.csv', sep=",")
@@ -46,67 +40,16 @@ def calculate_emissions():
     settlement_df = pd.DataFrame.from_dict(settlement_dict, orient="index")
 
     # vlookup calculation from Excel to calculate correction factors
-    correction_factors = []
+    correction_factors = {}
     for col in weights_df.columns:
-        correction_factors.append(np.dot(weights_df[col], settlement_df.iloc[:, 0:1].stack())/np.sum(settlement_df)[0])
+        correction_factors[col] = (np.dot(weights_df[col], settlement_df.iloc[:, 0:1].stack())/np.sum(settlement_df)[0])
 
-    # bus
-    BUS_PASSENGER_KM_PER_CAPITA = default_df.iat[country_list.index(country), 1]
-    BUS_OCCUPANCY = default_df.iat[country_list.index(country), 2]
-    BUS_EMISSION_FACTOR = default_df.iat[country_list.index(country), 3]
-    bus = BUS_PASSENGER_KM_PER_CAPITA/BUS_OCCUPANCY*BUS_EMISSION_FACTOR/million*correction_factors[0]
-    transport_values_list.append(bus)
+    # I wanna map correction_factors. Waiting for Bill...
+    for transport_mode in country_data.transport_modes:
+        emissions[transport_mode.name] = calculate_emission(transport_mode, correction_factors[transport_mode.name])
 
-    # passenger car
-    PASSENGER_CAR_PASSENGER_KM_PER_CAPITA = default_df.iat[country_list.index(country), 4]
-    PASSENGER_CAR_AVERAGE_CAR_OCCUPANCY = default_df.iat[country_list.index(country), 5]
-    PASSENGER_CAR_AVERAGE_EMISSION_FACTOR = default_df.iat[country_list.index(country), 6]
-    passenger_car = PASSENGER_CAR_PASSENGER_KM_PER_CAPITA/PASSENGER_CAR_AVERAGE_CAR_OCCUPANCY*PASSENGER_CAR_AVERAGE_EMISSION_FACTOR/million*correction_factors[1]
-    transport_values_list.append(passenger_car)
-
-    # metro
-    METRO_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 7]
-    METRO_EMISSION_FACTOR = default_df.iat[country_list.index(country), 9]
-    metro = METRO_VEHICLE_KM_PER_CAPITA*METRO_EMISSION_FACTOR/million*correction_factors[2]
-    transport_values_list.append(metro)
-
-    # tram
-    TRAM_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 10]
-    TRAM_EMISSION_FACTOR = default_df.iat[country_list.index(country), 12]
-    tram = TRAM_VEHICLE_KM_PER_CAPITA*TRAM_EMISSION_FACTOR/million*correction_factors[3]
-    transport_values_list.append(tram)
-
-    # passenger train
-    TRAIN_PASSENGER_KM_PER_CAPITA = default_df.iat[country_list.index(country), 13]
-    TRAIN_AVERAGE_OCCUPANCY = default_df.iat[country_list.index(country), 14]
-    TRAIN_EMISSION_FACTOR = default_df.iat[country_list.index(country), 15]
-    passenger_train = TRAIN_PASSENGER_KM_PER_CAPITA/TRAIN_AVERAGE_OCCUPANCY*TRAIN_EMISSION_FACTOR/million*correction_factors[4]
-    transport_values_list.append(passenger_train)
-
-    # rail transport
-    RAIL_TRANSPORT_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 16]
-    RAIL_TRANSPORT_EMISSION_FACTOR = default_df.iat[country_list.index(country), 17]
-    rail_transport = RAIL_TRANSPORT_VEHICLE_KM_PER_CAPITA*RAIL_TRANSPORT_EMISSION_FACTOR/million*correction_factors[5]
-    transport_values_list.append(rail_transport)
-
-    # road transport
-    ROAD_TRANSPORT_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 18]
-    ROAD_TRANSPORT_EMISSION_FACTOR = default_df.iat[country_list.index(country), 19]
-    road_transport = ROAD_TRANSPORT_VEHICLE_KM_PER_CAPITA*ROAD_TRANSPORT_EMISSION_FACTOR/million*correction_factors[6]
-    transport_values_list.append(road_transport)
-
-    # inland waterways
-    INLAND_WATERWAYS_TRANSPORT_VEHICLE_KM_PER_CAPITA = default_df.iat[country_list.index(country), 20]
-    INLAND_WATERWAYS_TRANSPORT_EMISSION_FACTOR = default_df.iat[country_list.index(country), 21]
-    inland_waterways = INLAND_WATERWAYS_TRANSPORT_VEHICLE_KM_PER_CAPITA*INLAND_WATERWAYS_TRANSPORT_EMISSION_FACTOR/million*correction_factors[7]
-    transport_values_list.append(inland_waterways)
-
-    # total
-    total = bus + passenger_car + metro + tram + passenger_train + rail_transport + road_transport + inland_waterways
-    transport_values_list.append(total)
-
-    total_emissions_dict = dict(zip(transport_list, transport_values_list))
+    emissions["total"] = sum(emissions.values())
 
     # return jsonify(total_emissions_dict)
-    return total_emissions_dict
+    return emissions
 
