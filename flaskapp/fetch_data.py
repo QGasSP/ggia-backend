@@ -35,7 +35,7 @@ def fetch_transport_modes(filename):
             if len(transport) > 1 and transport[1] in data.columns:
                 transport_mode['passenger_km_per_person'] = float(data[transport[1]][country_list[i]["id"]])
             if len(transport) > 2 and transport[2] in data.columns:
-                if transport[0] in CALCULATE_WITHOUT_EMISSION_1:
+                if transport[0] in CALCULATE_WITHOUT_OCCUPANCY_0:
                     transport_mode['emission_factor_per_km'] = float(data[transport[2]][country_list[i]["id"]])
                 else:
                     transport_mode['average_occupancy'] = float(data[transport[2]][country_list[i]["id"]])
