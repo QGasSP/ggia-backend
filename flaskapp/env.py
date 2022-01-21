@@ -58,3 +58,14 @@ WEIGHT_LIST = [TRANSIT_MODE, SETTLEMENT_TYPE, WEIGHT]
 CALCULATE_WITHOUT_OCCUPANCY_0 = [
     METRO_NAME, TRAM_NAME, RAIL_TRANSPORT_NAME, ROAD_TRANSPORT_NAME, WATERWAYS_TRANSPORT_NAME
 ]
+
+YEARLY_GROWTH_FACTOR_NAMES = {
+    "bus": "bus_annual_change_in_passenger_km",
+    "car": "car_annual_change_in_passenger_km",
+    "tram": "tram_annual_change_in_passenger_km",
+    "metro": "metro_annual_change_in_passenger_km",
+    "train": "train_annual_change_in_passenger_km",
+    "rail_transport": "rail_transport_annual_change_in_vehicle_km",
+    "road_transport": "road_transport_annual_change_in_vehicle_km",
+    "waterways_transport": "water_transport_annual_change_in_vehicle_km"
+}
