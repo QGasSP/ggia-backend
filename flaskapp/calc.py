@@ -17,8 +17,15 @@ def calculate_correction_factor(settlement_weights, settlement_percentages):
 
 
 def calculate_emission(transport_mode, correction_factor):
+    """
+    This function calculates emission based on transport mode and correction factor.
+    :param transport_mode: string
+    :param correction_factor: float
+    :return: float
+    """
     if transport_mode.name in CALCULATE_WITHOUT_OCCUPANCY_0:
-        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * correction_factor
+        return transport_mode.passenger_km_per_person * transport_mode.emission_factor_per_km / MILLION * \
+               correction_factor
     else:
         return transport_mode.passenger_km_per_person / transport_mode.average_occupancy * \
                transport_mode.emission_factor_per_km / MILLION * correction_factor
