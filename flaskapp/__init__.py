@@ -2,7 +2,7 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_cors import CORS
 import os
-from .calc import blue_print
+from .calc import blue_print, calculate_emissions
 from .models import db, Country, TransportMode
 from .config import *
 
@@ -29,11 +29,17 @@ def create_app(test_config=None):
         app.config.from_object(Config())
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['JSON_SORT_KEYS'] = False
 
     db.init_app(app)
     migrate = Migrate(app, db)
 
     app.register_blueprint(calc.blue_print)
+
+    # This is deprecated. We will use /api/v1/* urls
+    @app.route("/calc/emission")
+    def deprecated_calculate_emissions():
+        return calculate_emissions()
 
     @app.route('/')
     def hello():

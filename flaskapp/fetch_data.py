@@ -35,7 +35,7 @@ def fetch_transport_modes(filename):
             if len(transport) > 1 and transport[1] in data.columns:
                 transport_mode['passenger_km_per_person'] = float(data[transport[1]][country_list[i]["id"]])
             if len(transport) > 2 and transport[2] in data.columns:
-                if transport[0] in CALCULATE_WITHOUT_EMISSION_1:
+                if transport[0] in CALCULATE_WITHOUT_OCCUPANCY_0:
                     transport_mode['emission_factor_per_km'] = float(data[transport[2]][country_list[i]["id"]])
                 else:
                     transport_mode['average_occupancy'] = float(data[transport[2]][country_list[i]["id"]])
@@ -56,4 +56,15 @@ def fetch_weights(filename):
     settlement_type = list(data['settlement_type'])
     weight_list = list(data['weight'])
 
-    return [{'transit_mode': transit_mode_list[i], 'settlement_type': settlement_type[i], 'settlement_weight': weight_list[i], } for i in range(len(weight_list))]
+    return [{'transit_mode': transit_mode_list[i], 'settlement_type': settlement_type[i], 'settlement_weight': weight_list[i]} for i in range(len(weight_list))]
+
+def fetch_yearly_growth_factors(filename):
+    data = pd.read_csv(filename, sep=",", header=0)
+    data.fillna(0, inplace=True)
+
+    year_list = list(data['year'])
+    country_list = list(data['country'])
+    growth_factor_name_list = list(data['growth_factor_name'])
+    growth_factor_value_list = list(data['growth_factor_value'])
+
+    return [{'year': year_list[i], 'country': country_list[i], 'growth_factor_name': growth_factor_name_list[i], 'growth_factor_value': growth_factor_value_list[i]} for i in range(len(year_list))]
