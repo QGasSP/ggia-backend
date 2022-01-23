@@ -5,7 +5,7 @@ from flaskapp.env import *
 
 MILLION = 1000000
 
-blue_print = Blueprint("calc", __name__, url_prefix="/calc")
+blue_print = Blueprint("calc", __name__, url_prefix="/api/v1/calculate")
 
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
