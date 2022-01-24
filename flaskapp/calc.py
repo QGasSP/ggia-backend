@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from flask import request
 from flaskapp.models import *
 from flaskapp.env import *
+import humps
 
 MILLION = 1000000
 
@@ -109,10 +110,10 @@ def calculate_yearly_projections():
 
     projections["population"] = annual_population
 
-    return {
+    return humps.camelize({
         "status": "success",
         "data": {
             "emissions": emissions,
             "projections": projections
         }
-    }
+    })
