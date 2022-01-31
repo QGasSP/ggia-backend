@@ -11,6 +11,8 @@ blue_print = Blueprint("calc", __name__, url_prefix="/api/v1/calculate")
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
     summary = 0
+    for key in settlement_percentages.keys():
+        settlement_percentages[key] = float(settlement_percentages[key])
     for settlement in settlement_weights:
         summary += settlement_percentages[settlement.settlement_type] * settlement.settlement_weight
 
@@ -37,6 +39,7 @@ def calculate_projections_by_growth_factors(
         annual_population,
         current_value):
     result = {}
+    
     for annual_transport_growth_factor in annual_transport_growth_factors:
         annual_change = \
             current_value * (100 + annual_transport_growth_factor.growth_factor_value) / 100
@@ -96,7 +99,7 @@ def calculate_yearly_projections():
 
     annual_population = calculate_population_projections(
         annual_population_growth_factors,
-        request_body["population"])
+        float(request_body["population"]))
 
     for key in emissions.keys():
         if key == "total":
@@ -108,14 +111,14 @@ def calculate_yearly_projections():
         projections[key] = calculate_projections_by_growth_factors(
             annual_transport_growth_factors,
             annual_population,
-            emissions[key] * request_body["population"])
+            emissions[key] * float(request_body["population"]))
 
     projections["population"] = annual_population
 
-    return humps.camelize({
+    return {
         "status": "success",
         "data": {
             "emissions": emissions,
             "projections": projections
         }
-    })
+    }
