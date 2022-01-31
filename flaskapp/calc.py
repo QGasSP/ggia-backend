@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from flask import request
 from flaskapp.models import *
 from flaskapp.env import *
+import humps
 
 MILLION = 1000000
 
@@ -10,6 +11,8 @@ blue_print = Blueprint("calc", __name__, url_prefix="/api/v1/calculate")
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
     summary = 0
+    for key in settlement_percentages.keys():
+        settlement_percentages[key] = float(settlement_percentages[key])
     for settlement in settlement_weights:
         summary += settlement_percentages[settlement.settlement_type] * settlement.settlement_weight
 
@@ -36,6 +39,7 @@ def calculate_projections_by_growth_factors(
         annual_population,
         current_value):
     result = {}
+    
     for annual_transport_growth_factor in annual_transport_growth_factors:
         annual_change = \
             current_value * (100 + annual_transport_growth_factor.growth_factor_value) / 100
@@ -67,10 +71,11 @@ def calculate_emissions():
     emissions for buses, passenger cars, metros, trams, passenger trains, rail freight, road freight and inland
     waterways freight and stores it as a dictionary that Flask will return as a JSON object
     """
+    request_body = humps.decamelize(request.json)
     emissions = {}
-    country_data = Country.query.filter_by(name=request.json["country"]).first()
+    country_data = Country.query.filter_by(name=request_body["country"]).first()
 
-    settlement_dict = request.json["settlement_distribution"]
+    settlement_dict = request_body["settlement_distribution"]
 
     for transport_mode in country_data.transport_modes:
         settlement_weights = SettlementWeights.query.filter_by(transit_mode=transport_mode.name).all()
@@ -84,28 +89,29 @@ def calculate_emissions():
 
 @blue_print.route("transport", methods=["GET", "POST"])
 def calculate_yearly_projections():
+    request_body = humps.decamelize(request.json)
     emissions = calculate_emissions()
     projections = {}
     annual_population_growth_factors = YearlyGrowthFactors.query.filter_by(
-        country=request.json["country"],
+        country=request_body["country"],
         growth_factor_name="annual_population_change"
     ).all()
 
     annual_population = calculate_population_projections(
         annual_population_growth_factors,
-        request.json["population"])
+        float(request_body["population"]))
 
     for key in emissions.keys():
         if key == "total":
             continue
         annual_transport_growth_factors = YearlyGrowthFactors.query.filter_by(
-            country=request.json["country"],
+            country=request_body["country"],
             growth_factor_name=YEARLY_GROWTH_FACTOR_NAMES[key]
         ).all()
         projections[key] = calculate_projections_by_growth_factors(
             annual_transport_growth_factors,
             annual_population,
-            emissions[key] * request.json["population"])
+            emissions[key] * float(request_body["population"]))
 
     projections["population"] = annual_population
 
