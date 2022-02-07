@@ -171,3 +171,29 @@ def calculate_transport():
         }
     }
 
+
+@blue_print.route("transport-new-development", methods=["GET", "POST"])
+def calculate_transport_new_development():
+    request_body = humps.decamelize(request.json)
+
+    current_population = request_body["population"]
+    new_development = request_body["new_development"]
+
+    population = new_development["population"]
+    year_start = new_development["year_start"]
+    year_finish = new_development["year_finish"]
+
+    population_per_year = population / (year_finish - year_start)
+
+    result = dict()
+
+    for year in range(year_start, year_finish):
+        current_population += population_per_year
+        result[year] = round(current_population)
+
+    return {
+        "status": "success",
+        "data": {
+            "new_residents": result
+        }
+    }
