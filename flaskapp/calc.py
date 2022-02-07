@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint
 from flask import request
 from marshmallow import Schema, fields, ValidationError
 from marshmallow.validate import Range
@@ -19,6 +19,7 @@ class U1Schema(Schema):
         validate=[Range(min=1, error="Population must be greater than 0")])
     settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
     year = fields.Integer(required=False)
+
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
     """
@@ -55,9 +56,10 @@ def calculate_emission(transport_mode, correction_factor):
 def calculate_projections_by_growth_factors(
         annual_transport_growth_factors,
         annual_population,
-        current_value):
+        current_value, current_year):
     """
     This function calculates growth factors and returns it as dictionary (key is a year, value is a growth factor)
+    :param current_year: int
     :param annual_transport_growth_factors: list
     :param annual_population: dictionary
     :param current_value: float
@@ -66,6 +68,9 @@ def calculate_projections_by_growth_factors(
     result = {}
 
     for annual_transport_growth_factor in annual_transport_growth_factors:
+        if annual_transport_growth_factor.year < current_year:
+            continue
+
         annual_change = \
             current_value * (100 + annual_transport_growth_factor.growth_factor_value) / 100
 
@@ -79,11 +84,13 @@ def calculate_projections_by_growth_factors(
 
 def calculate_population_projections(
         annual_population_growth_factors,
-        current_value):
+        current_value, current_year):
     result = {}
     for annual_population_growth_factor in annual_population_growth_factors:
-        result[annual_population_growth_factor.year] = current_value * \
-                                                       (100 + annual_population_growth_factor.growth_factor_value) / 100
+        if annual_population_growth_factor.year < current_year:
+            continue
+        result[annual_population_growth_factor.year] = \
+            current_value * (100 + annual_population_growth_factor.growth_factor_value) / 100
         current_value = result[annual_population_growth_factor.year]
 
     return result
@@ -109,15 +116,14 @@ def calculate_emissions(country, settlement_distribution):
     return emissions
 
 
-def calculate_yearly_projections(country, population, emissions):
-
+def calculate_yearly_projections(country, population, year, emissions):
     projections = {}
     annual_population_growth_factors = YearlyGrowthFactors.query.filter_by(
         country=country,
         growth_factor_name="annual_population_change"
     ).all()
 
-    annual_population = calculate_population_projections(annual_population_growth_factors, population)
+    annual_population = calculate_population_projections(annual_population_growth_factors, population, year)
 
     for key in emissions.keys():
         if key == "total":
@@ -129,7 +135,7 @@ def calculate_yearly_projections(country, population, emissions):
         projections[key] = calculate_projections_by_growth_factors(
             annual_transport_growth_factors,
             annual_population,
-            emissions[key] * population)
+            emissions[key] * population, year)
 
     projections["population"] = annual_population
 
@@ -145,16 +151,17 @@ def calculate_transport():
         request_schema.load(request_body)
     except ValidationError as err:
         return {
-            "status": "invalid",
-            "messages": err.messages
-        }, 400
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
 
     country = request_body["country"]
     population = request_body["population"]
+    year = request_body["year"]
     settlement_distribution = request_body["settlement_distribution"]
 
     emissions = calculate_emissions(country, settlement_distribution)
-    projections = calculate_yearly_projections(country, population, emissions)
+    projections = calculate_yearly_projections(country, population, year, emissions)
 
     return {
         "status": "success",
