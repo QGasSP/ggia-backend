@@ -11,7 +11,7 @@ MILLION = 1000000
 blue_print = Blueprint("calc", __name__, url_prefix="/api/v1/calculate")
 
 
-class U1Schema(Schema):
+class Baseline(Schema):
     country = fields.String(required=True)
     population = fields.Integer(
         required=True,
@@ -19,6 +19,18 @@ class U1Schema(Schema):
         validate=[Range(min=1, error="Population must be greater than 0")])
     settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
     year = fields.Integer(required=False)
+
+
+class NewDevelopment(Schema):
+    new_residents = fields.Integer(required=True, strict=True)
+    year_start = fields.Integer(required=True, strict=True)
+    year_finish = fields.Integer(required=True, strict=True)
+    new_settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
+
+
+class Transport(Schema):
+    baseline = fields.Nested(Baseline)
+    new_development = fields.Nested(NewDevelopment)
 
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
@@ -142,10 +154,108 @@ def calculate_yearly_projections(country, population, year, emissions):
     return projections
 
 
+def calculate_new_residents_after_new_development(new_residents, year_start, year_finish):
+    population_per_year = new_residents / (year_finish - year_start)
+    population = 0
+    residents = dict()
+
+    for year in range(year_start, year_finish):
+        population += population_per_year
+        residents[year] = round(population)
+
+    return residents
+
+
+def calculate_total_population_after_new_development(new_residents, population):
+    total = dict()
+    factor = dict()
+    previous = 0
+
+    for year in population.keys():
+        previous = new_residents.get(year, previous)
+        total[year] = round(population[year] + new_residents.get(year, previous))
+        factor[year] = round(total[year] / population[year])
+
+    return total, factor
+
+
+def calculate_transport_baseline(baseline):
+    country = baseline["country"]
+    population = baseline["population"]
+    year = baseline["year"]
+    settlement_distribution = baseline["settlement_distribution"]
+
+    emissions = calculate_emissions(country, settlement_distribution)
+    projections = calculate_yearly_projections(country, population, year, emissions)
+
+    return {
+        "emissions": emissions,
+        "projections": projections
+    }
+
+
+def calculate_new_settlement_distribution(
+        population,
+        total,
+        settlement_distribution,
+        new_settlement_distribution):
+
+    result = dict()
+
+    for year in population.keys():
+        distribution = dict()
+        for key in settlement_distribution.keys():
+            new_residents = total[year] - population[year]
+            distribution[key] = (population[year] / total[year] * settlement_distribution[key]) + \
+                (new_residents / total[year] * new_settlement_distribution[key])
+        result[year] = distribution
+
+    return result
+
+
+def calculate_emissions_new_development(emissions, factor):
+    emissions_after_development = dict()
+    for key in emissions.keys():
+        if key == "population":
+            continue
+        emission = emissions[key]
+        emission_after_development = dict()
+        for year in emission.keys():
+
+            emission_after_development[key] = emission[year] * factor[year]
+        emissions_after_development[key] = emission
+    return emissions_after_development
+
+
+def calculate_transport_new_development(baseline, baseline_result, new_development):
+    new_residents = new_development["new_residents"]
+    new_settlement_distribution = new_development["new_settlement_distribution"]
+    year_start = new_development["year_start"]
+    year_finish = new_development["year_finish"]
+
+    residents = calculate_new_residents_after_new_development(new_residents, year_start, year_finish)
+    total, factor = calculate_total_population_after_new_development(residents, baseline_result["population"])
+    settlement_distribution = calculate_new_settlement_distribution(
+        baseline_result["population"],
+        total,
+        baseline["settlement_distribution"],
+        new_settlement_distribution)
+    emission_projections = calculate_emissions_new_development(baseline_result, factor)
+
+    return {
+        "impact": {
+            "new_residents": residents,
+            "population": total,
+            "settlement_distribution": settlement_distribution,
+            "emissions": emission_projections
+        },
+    }
+
+
 @blue_print.route("transport", methods=["GET", "POST"])
 def calculate_transport():
     request_body = humps.decamelize(request.json)
-    request_schema = U1Schema()
+    request_schema = Transport()
 
     try:
         request_schema.load(request_body)
@@ -155,45 +265,17 @@ def calculate_transport():
                    "messages": err.messages
                }, 400
 
-    country = request_body["country"]
-    population = request_body["population"]
-    year = request_body["year"]
-    settlement_distribution = request_body["settlement_distribution"]
-
-    emissions = calculate_emissions(country, settlement_distribution)
-    projections = calculate_yearly_projections(country, population, year, emissions)
-
-    return {
-        "status": "success",
-        "data": {
-            "emissions": emissions,
-            "projections": projections
-        }
-    }
-
-
-@blue_print.route("transport-new-development", methods=["GET", "POST"])
-def calculate_transport_new_development():
-    request_body = humps.decamelize(request.json)
-
-    current_population = request_body["population"]
+    baseline = request_body["baseline"]
     new_development = request_body["new_development"]
 
-    population = new_development["population"]
-    year_start = new_development["year_start"]
-    year_finish = new_development["year_finish"]
-
-    population_per_year = population / (year_finish - year_start)
-
-    result = dict()
-
-    for year in range(year_start, year_finish):
-        current_population += population_per_year
-        result[year] = round(current_population)
+    baseline_result = calculate_transport_baseline(baseline)
+    new_development_result = calculate_transport_new_development(
+        baseline, baseline_result["projections"], new_development)
 
     return {
         "status": "success",
         "data": {
-            "new_residents": result
+            "baseline": baseline_result,
+            "new_development": new_development_result
         }
     }
