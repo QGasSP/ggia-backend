@@ -101,9 +101,8 @@ def calculate_population_projections(
     for annual_population_growth_factor in annual_population_growth_factors:
         if annual_population_growth_factor.year < current_year:
             continue
-        result[annual_population_growth_factor.year] = \
-            current_value * (100 + annual_population_growth_factor.growth_factor_value) / 100
-        current_value = result[annual_population_growth_factor.year]
+        current_value = round(current_value * (100 + annual_population_growth_factor.growth_factor_value) / 100)
+        result[annual_population_growth_factor.year] = current_value
 
     return result
 
@@ -244,10 +243,10 @@ def calculate_transport_new_development(baseline, baseline_result, new_developme
 
     return {
         "impact": {
-            "new_residents": residents,
-            "population": total,
-            "settlement_distribution": settlement_distribution,
-            "emissions": emission_projections
+            # "new_residents": residents,
+            "population": total
+            # "settlement_distribution": settlement_distribution,
+            # "emissions": emission_projections
         },
     }
 
