@@ -154,6 +154,9 @@ def calculate_yearly_projections(country, population, year, emissions):
 
 
 def calculate_new_residents_after_new_development(new_residents, year_start, year_finish):
+    if year_finish <= year_start:
+        return {}
+
     population_per_year = new_residents / (year_finish - year_start)
     population = 0
     residents = dict()
