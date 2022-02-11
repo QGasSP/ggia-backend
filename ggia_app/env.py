@@ -69,3 +69,5 @@ YEARLY_GROWTH_FACTOR_NAMES = {
     "road_transport": "road_transport_annual_change_in_vehicle_km",
     "waterways_transport": "water_transport_annual_change_in_vehicle_km"
 }
+
+MILLION = 1000000

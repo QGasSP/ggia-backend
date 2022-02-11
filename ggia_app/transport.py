@@ -2,13 +2,11 @@ from flask import Blueprint
 from flask import request
 from marshmallow import Schema, fields, ValidationError
 from marshmallow.validate import Range
-from flaskapp.models import *
-from flaskapp.env import *
+from ggia_app.models import *
+from ggia_app.env import *
 import humps
 
-MILLION = 1000000
-
-blue_print = Blueprint("calc", __name__, url_prefix="/api/v1/calculate")
+blue_print = Blueprint("transport", __name__, url_prefix="/api/v1/calculate/transport")
 
 
 class Baseline(Schema):
@@ -254,7 +252,7 @@ def calculate_transport_new_development(baseline, baseline_result, new_developme
     }
 
 
-@blue_print.route("transport", methods=["GET", "POST"])
+@blue_print.route("", methods=["GET", "POST"])
 def calculate_transport():
     request_body = humps.decamelize(request.json)
     request_schema = Transport()
