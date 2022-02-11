@@ -75,7 +75,7 @@ def calculate_projections_by_growth_factors(
     :param current_value: float
     :return: dictionary
     """
-    result = {}
+    projections = {}
 
     for annual_transport_growth_factor in annual_transport_growth_factors:
         if annual_transport_growth_factor.year < current_year:
@@ -84,12 +84,12 @@ def calculate_projections_by_growth_factors(
         annual_change = \
             current_value * (100 + annual_transport_growth_factor.growth_factor_value) / 100
 
-        result[annual_transport_growth_factor.year] = \
+        projections[annual_transport_growth_factor.year] = \
             annual_change / annual_population.get(annual_transport_growth_factor.year, 1)
 
         current_value = annual_change
 
-    return result
+    return projections
 
 
 def calculate_population_projections(
@@ -179,7 +179,7 @@ def calculate_total_population_after_new_development(new_residents, population):
     return total, factor
 
 
-def calculate_transport_baseline(baseline):
+def calculate_baseline(baseline):
     country = baseline["country"]
     population = baseline["population"]
     year = baseline["year"]
@@ -199,7 +199,6 @@ def calculate_new_settlement_distribution(
         total,
         settlement_distribution,
         new_settlement_distribution):
-
     result = dict()
 
     for year in population.keys():
@@ -207,27 +206,26 @@ def calculate_new_settlement_distribution(
         for key in settlement_distribution.keys():
             new_residents = total[year] - population[year]
             distribution[key] = (population[year] / total[year] * settlement_distribution[key]) + \
-                (new_residents / total[year] * new_settlement_distribution[key])
+                                (new_residents / total[year] * new_settlement_distribution[key])
         result[year] = distribution
 
     return result
 
 
-def calculate_emissions_new_development(emissions, factor):
-    emissions_after_development = dict()
+def calculate_emissions_after_new_development(emissions, factor):
+    emissions_after_new_development = dict()
     for key in emissions.keys():
         if key == "population":
             continue
         emission = emissions[key]
         emission_after_development = dict()
         for year in emission.keys():
-
             emission_after_development[key] = emission[year] * factor[year]
-        emissions_after_development[key] = emission
-    return emissions_after_development
+        emissions_after_new_development[key] = emission
+    return emissions_after_new_development
 
 
-def calculate_transport_new_development(baseline, baseline_result, new_development):
+def calculate_new_development(baseline, baseline_result, new_development):
     new_residents = new_development["new_residents"]
     new_settlement_distribution = new_development["new_settlement_distribution"]
     year_start = new_development["year_start"]
@@ -240,20 +238,26 @@ def calculate_transport_new_development(baseline, baseline_result, new_developme
         total,
         baseline["settlement_distribution"],
         new_settlement_distribution)
-    emission_projections = calculate_emissions_new_development(baseline_result, factor)
+    emission_projections = calculate_emissions_after_new_development(baseline_result, factor)
 
-    return {
-        "impact": {
-            # "new_residents": residents,
-            "population": total
-            # "settlement_distribution": settlement_distribution,
-            # "emissions": emission_projections
-        },
-    }
+    return \
+        {
+            "impact": {
+                "population": total
+            },
+        }, \
+        {
+            "impact": {
+                "new_residents": residents,
+                "population": total,
+                "settlement_distribution": settlement_distribution,
+                "emissions": emission_projections
+            }
+        }
 
 
 @blue_print.route("", methods=["GET", "POST"])
-def calculate_transport():
+def route_transport():
     request_body = humps.decamelize(request.json)
     request_schema = Transport()
 
@@ -268,14 +272,68 @@ def calculate_transport():
     baseline = request_body["baseline"]
     new_development = request_body["new_development"]
 
-    baseline_result = calculate_transport_baseline(baseline)
-    new_development_result = calculate_transport_new_development(
+    baseline_response = calculate_baseline(baseline)
+    new_development_response, new_development_result = calculate_new_development(
+        baseline, baseline_response["projections"], new_development)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_response,
+            "new_development": new_development_response
+        }
+    }
+
+
+@blue_print.route("baseline", methods=["GET", "POST"])
+def route_baseline():
+    request_body = humps.decamelize(request.json)
+    baseline_schema = Baseline()
+    baseline = request_body.get("baseline", -1)
+
+    try:
+        baseline_schema.load(baseline)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    baseline_result = calculate_baseline(baseline)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_result
+        }
+    }
+
+
+@blue_print.route("new-development", methods=["GET", "POST"])
+def route_new_development():
+    request_body = humps.decamelize(request.json)
+    baseline = request_body.get("baseline", -1)
+    new_development = request_body.get("new_development", -1)
+
+    baseline_schema = Baseline()
+    new_development_schema = NewDevelopment()
+
+    try:
+        baseline_schema.load(baseline)
+        new_development_schema.load(new_development)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    baseline_result = calculate_baseline(baseline)
+    new_development_result = calculate_new_development(
         baseline, baseline_result["projections"], new_development)
 
     return {
         "status": "success",
         "data": {
-            "baseline": baseline_result,
             "new_development": new_development_result
         }
     }
