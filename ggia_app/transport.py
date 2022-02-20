@@ -1,34 +1,12 @@
 from flask import Blueprint
 from flask import request
-from marshmallow import Schema, fields, ValidationError
-from marshmallow.validate import Range
+from marshmallow import ValidationError
+from ggia_app.transport_schemas import *
 from ggia_app.models import *
 from ggia_app.env import *
 import humps
 
 blue_print = Blueprint("transport", __name__, url_prefix="/api/v1/calculate/transport")
-
-
-class Baseline(Schema):
-    country = fields.String(required=True)
-    population = fields.Integer(
-        required=True,
-        strict=True,
-        validate=[Range(min=1, error="Population must be greater than 0")])
-    settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
-    year = fields.Integer(required=False)
-
-
-class NewDevelopment(Schema):
-    new_residents = fields.Integer(required=True, strict=True)
-    year_start = fields.Integer(required=True, strict=True)
-    year_finish = fields.Integer(required=True, strict=True)
-    new_settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
-
-
-class Transport(Schema):
-    baseline = fields.Nested(Baseline)
-    new_development = fields.Nested(NewDevelopment)
 
 
 def calculate_correction_factor(settlement_weights, settlement_percentages):
@@ -256,6 +234,162 @@ def calculate_new_development(baseline, baseline_result, new_development):
         }
 
 
+def calculate_change_policy_impact(current, expected_change, year_start, year_end, years):
+    changes = dict()
+    if year_end <= year_start:
+        for i in years:
+            changes[i] = current
+        return changes
+
+    yearly_change = expected_change / (year_end - year_start)
+
+    for year in years:
+        if year_start <= year < year_end:
+            current = round(current + yearly_change, 1)
+        changes[year] = current
+
+    return changes
+
+
+def calculate_transport_activity(emissions, affected_area, changes):
+    activity = dict()
+    for year in emissions.keys():
+        activity[year] = (affected_area * emissions[year] * changes[year] + (100 - affected_area) * emissions[year])/100
+
+    return activity
+
+
+def calculate_impact(transports, affected_area, changes, transport_modes):
+    transport_impact = dict()
+    for transport_mode in transport_modes:
+        if transport_mode in PASSENGER_TRANSPORT:
+            transport_impact[transport_mode] = calculate_transport_activity(
+                transports[transport_mode], affected_area, changes)
+        else:
+            transport_impact[transport_mode] = calculate_transport_activity(
+                transports[transport_mode], 100, changes)
+    transport_impact["total"] = dict()
+    for transport_mode in transport_impact.keys():
+        if transport_mode == "total":
+            continue
+        for year in transport_impact[transport_mode].keys():
+            transport_impact["total"][year] = transport_impact["total"].get(year, 0) + \
+                                              transport_impact[transport_mode][year]
+
+    return transport_impact
+
+
+def calculate_impact_percentage(transport_impact):
+    impact = dict()
+    for transport_mode in transport_impact.keys():
+        if transport_mode == "total":
+            continue
+        impact[transport_mode] = dict()
+        for year in transport_impact[transport_mode].keys():
+            impact[transport_mode][year] = \
+                transport_impact[transport_mode][year] / transport_impact["total"][year] * 100
+
+    return impact
+
+
+def calculate_modal_split(shares, transport_impact_percentage, year_start, year_end, years):
+    impact = dict()
+    impact["total"] = dict()
+
+    for mode in shares.keys():
+        changes = calculate_change_policy_impact(
+            0, shares[mode], year_start, year_end, years)
+        impact[mode] = dict()
+        for year in transport_impact_percentage[mode].keys():
+            impact[mode][year] = transport_impact_percentage[mode][year] + changes[year]
+            impact["total"][year] = impact["total"].get(year, 0) + impact[mode][year]
+    return calculate_impact_percentage(impact)
+
+
+def calculate_impact_modal_split(modal_split, transport_impact, transport_modes):
+    impact = dict()
+    for mode in transport_modes:
+        impact[mode] = dict()
+        for year in transport_impact[mode]:
+            impact[mode][year] = modal_split[mode][year] / 100 * transport_impact[mode][year]
+    return impact
+
+
+def calculate_total(dictionary):
+    dictionary["total"] = dict()
+    for key in dictionary.keys():
+        if key == "total":
+            continue
+        for year in dictionary[key].keys():
+            dictionary["total"][year] = dictionary["total"].get(year, 0) + dictionary[key][year]
+    return dictionary
+
+
+def calculate_policy_quantification(policy_quantification, new_development_result):
+    years = new_development_result["impact"]["population"].keys()
+    passenger_mobility = policy_quantification["passenger_mobility"]
+    expected_change = passenger_mobility["expected_change"]
+    affected_area = passenger_mobility["affected_area"]
+    year_start = passenger_mobility["year_start"]
+    year_end = passenger_mobility["year_end"]
+    change_policy_impact_pm = calculate_change_policy_impact(
+        100,
+        expected_change,
+        year_start,
+        year_end,
+        new_development_result["impact"]["population"].keys())
+
+    freight_mobility = policy_quantification["freight_transport"]
+    expected_change = freight_mobility["expected_change"]
+    year_start = freight_mobility["year_start"]
+    year_end = freight_mobility["year_end"]
+    change_policy_impact_ft = calculate_change_policy_impact(
+        100,
+        expected_change,
+        year_start,
+        year_end,
+        years)
+
+    transport_impact_pm = calculate_impact(
+        new_development_result["impact"]["emissions"],
+        affected_area,
+        change_policy_impact_pm,
+        PASSENGER_TRANSPORT
+    )
+    transport_impact_ft = calculate_impact(
+        new_development_result["impact"]["emissions"],
+        affected_area,
+        change_policy_impact_ft,
+        FREIGHT_TRANSPORT
+    )
+    transport_impact_percentage_pm = calculate_impact_percentage(transport_impact_pm)
+    transport_impact_percentage_ft = calculate_impact_percentage(transport_impact_ft)
+
+    modal_split_passenger = calculate_modal_split(
+        policy_quantification["modal_split_passenger"]["shares"],
+        transport_impact_percentage_pm,
+        policy_quantification["modal_split_passenger"]["year_start"],
+        policy_quantification["modal_split_passenger"]["year_end"],
+        years
+    )
+    modal_split_freight = calculate_modal_split(
+        policy_quantification["modal_split_freight"]["shares"],
+        transport_impact_percentage_ft,
+        policy_quantification["modal_split_freight"]["year_start"],
+        policy_quantification["modal_split_freight"]["year_end"],
+        years
+    )
+
+    impact_modal_split_pm = calculate_impact_modal_split(
+        modal_split_passenger, transport_impact_pm, PASSENGER_TRANSPORT)
+    impact_modal_split_ft = calculate_impact_modal_split(
+        modal_split_freight, transport_impact_ft, FREIGHT_TRANSPORT)
+
+    impact_modal_split = calculate_total(impact_modal_split_pm | impact_modal_split_ft)
+
+    return impact_modal_split
+
+
 @blue_print.route("", methods=["GET", "POST"])
 def route_transport():
     request_body = humps.decamelize(request.json)
@@ -271,16 +405,19 @@ def route_transport():
 
     baseline = request_body["baseline"]
     new_development = request_body["new_development"]
+    policy_quantification = request_body["policy_quantification"]
 
     baseline_response = calculate_baseline(baseline)
     new_development_response, new_development_result = calculate_new_development(
         baseline, baseline_response["projections"], new_development)
+    policy_quantification_response = calculate_policy_quantification(policy_quantification, new_development_result)
 
     return {
         "status": "success",
         "data": {
             "baseline": baseline_response,
-            "new_development": new_development_response
+            "new_development": new_development_result,
+            "policy_quantification": policy_quantification_response
         }
     }
 
