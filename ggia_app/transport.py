@@ -268,15 +268,8 @@ def calculate_impact(transports, affected_area, changes, transport_modes):
         else:
             transport_impact[transport_mode] = calculate_transport_activity(
                 transports[transport_mode], 100, changes)
-    transport_impact["total"] = dict()
-    for transport_mode in transport_impact.keys():
-        if transport_mode == "total":
-            continue
-        for year in transport_impact[transport_mode].keys():
-            transport_impact["total"][year] = transport_impact["total"].get(year, 0) + \
-                                              transport_impact[transport_mode][year]
 
-    return transport_impact
+    return calculate_total(transport_impact)
 
 
 def calculate_impact_percentage(transport_impact):
