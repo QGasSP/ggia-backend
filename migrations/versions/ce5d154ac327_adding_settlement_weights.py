@@ -7,7 +7,7 @@ Create Date: 2022-01-11 14:54:45.840180
 """
 from alembic import op
 import sqlalchemy as sa
-from flaskapp import fetch_data
+from ggia_app import fetch_data
 
 
 # revision identifiers, used by Alembic.

@@ -464,6 +464,7 @@ def route_new_development():
     return {
         "status": "success",
         "data": {
+            "baseline": baseline_result,
             "new_development": new_development_result
         }
     }

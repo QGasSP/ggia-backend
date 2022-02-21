@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-from flaskapp import fetch_data
+from ggia_app import fetch_data
 
 revision = 'a56bba9775d0'
 down_revision = 'ce5d154ac327'
