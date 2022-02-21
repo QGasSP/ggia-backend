@@ -19,6 +19,20 @@ class NewDevelopment(Schema):
     new_settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
 
 
+class ModalSplit(Schema):
+    shares = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
+    affected_population = fields.Integer()
+    year_start = fields.Integer(required=True, strict=True)
+    year_end = fields.Integer(required=True, strict=True)
+
+
+class PolicyQuantification(Schema):
+    passenger_mobility = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
+    freight_transport = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
+    modal_split_passenger = fields.Nested(ModalSplit)
+    modal_split_freight = fields.Nested(ModalSplit)
+
+
 class Transport(Schema):
     baseline = fields.Nested(Baseline)
     new_development = fields.Nested(NewDevelopment)
