@@ -6,7 +6,7 @@ Create Date: 2022-01-06 13:51:00.584702
 
 """
 from alembic import op
-from flaskapp import fetch_data
+from ggia_app import fetch_data
 import sqlalchemy as sa
 
 

@@ -2,9 +2,9 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_cors import CORS
 import os
-from .calc import blue_print, calculate_emissions
-from .models import db, Country, TransportMode
-from .config import *
+from ggia_app.transport import blue_print, calculate_emissions
+from ggia_app.models import db, Country, TransportMode
+from ggia_app.config import *
 
 
 def create_app(test_config=None):
@@ -34,12 +34,7 @@ def create_app(test_config=None):
     db.init_app(app)
     migrate = Migrate(app, db)
 
-    app.register_blueprint(calc.blue_print)
-
-    # This is deprecated. We will use /api/v1/* urls
-    @app.route("/calc/emission")
-    def deprecated_calculate_emissions():
-        return calculate_emissions()
+    app.register_blueprint(transport.blue_print)
 
     @app.route('/')
     def hello():

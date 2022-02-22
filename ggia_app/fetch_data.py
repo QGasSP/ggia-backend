@@ -56,7 +56,12 @@ def fetch_weights(filename):
     settlement_type = list(data['settlement_type'])
     weight_list = list(data['weight'])
 
-    return [{'transit_mode': transit_mode_list[i], 'settlement_type': settlement_type[i], 'settlement_weight': weight_list[i]} for i in range(len(weight_list))]
+    return [{
+        'transit_mode': transit_mode_list[i],
+        'settlement_type': settlement_type[i],
+        'settlement_weight': weight_list[i]}
+        for i in range(len(weight_list))]
+
 
 def fetch_yearly_growth_factors(filename):
     data = pd.read_csv(filename, sep=",", header=0)
@@ -67,4 +72,9 @@ def fetch_yearly_growth_factors(filename):
     growth_factor_name_list = list(data['growth_factor_name'])
     growth_factor_value_list = list(data['growth_factor_value'])
 
-    return [{'year': year_list[i], 'country': country_list[i], 'growth_factor_name': growth_factor_name_list[i], 'growth_factor_value': growth_factor_value_list[i]} for i in range(len(year_list))]
+    return [{
+        'year': year_list[i],
+        'country': country_list[i],
+        'growth_factor_name': growth_factor_name_list[i],
+        'growth_factor_value': growth_factor_value_list[i]}
+        for i in range(len(year_list))]
