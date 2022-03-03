@@ -85,38 +85,6 @@ LAND_USE_CHANGE_FACTOR_NAMES = {
     "organic_soil": "organic"
 }
 
-# LAND_TYPES_LIST = [
-#     'cropland_to_forestland',
-#     'grassland_to_forestland',
-#     'wetland_to_forestland',
-#     'settlement_to_forestland',
-#     'otherland_to_forestland',
-#     'forestland_to_cropland',
-#     'grassland_to_cropland',
-#     'wetland_to_cropland',
-#     'settlement_to_cropland',
-#     'otherland_to_cropland',
-#     'forestland_to_grassland',
-#     'cropland_to_grassland',
-#     'wetland_to_grassland',
-#     'settlement_to_grassland',
-#     'otherland_to_grassland',
-#     'forestland_to_wetland',
-#     'cropland_to_wetland',
-#     'grassland_to_wetland',
-#     'land_to_peat_extraction',
-#     'peatland_restoration',
-#     'forestland_to_settlement',
-#     'cropland_to_settlement',
-#     'grassland_to_settlement',
-#     'wetland_to_settlement',
-#     'otherland_to_settlement',
-#     'forestland_to_otherland',
-#     'cropland_to_otherland',
-#     'grassland_to_otherland',
-#     'wetland_to_otherland',
-#     'settlement_to_otherland']
-
 LAND_TYPES_LIST = [
     "cropland_to_forestland",
     "cropland_to_grassland",
