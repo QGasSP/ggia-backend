@@ -76,7 +76,7 @@ class YearlyGrowthFactors(db.Model):
 
 
 class LandUseChangeDefaultDataset(db.Model):
-    __tablename__ = 'land-use-change-default-dataset'
+    __tablename__ = 'land_use_change_default_dataset'
 
     id = db.Column(db.Integer, primary_key=True)
     country = db.Column(db.String)

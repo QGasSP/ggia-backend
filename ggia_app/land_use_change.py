@@ -26,20 +26,50 @@ def calculate_land_use_change(country):
 def route_land_use_change():
     request_body = humps.decamelize(request.json)
 
+    # request object
+    land_use_change_dict = request_body["land_use_change"]
+
+    country = 'Austria'
+
+    # database table
+    luc_data = LandUseChangeDefaultDataset.query.filter_by(country=country).first()
+
+    # 
+    result = land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+            * luc_data.factor_value
+            
+    return str(result)
+
     # total_area = request_body["totalArea"]
     # mineral = request_body["mineral"]
     # organic = request_body["organic"]
 
     # land_use_change_dict = request_body["landUseChange"]
-    land_use_change_dict = request_body["land_use_change"]
+    # land_use_change_dict = request_body["land_use_change"]
     # policy_start_year_dict = request_body["policyStartYear"]
-    policy_start_year_dict = request_body["policy_start_year"]
+    # policy_start_year_dict = request_body["policy_start_year"]
 
-    land_use_change_response = calculate_land_use_change(land_use_change_dict)
+    # land_use_change_response = calculate_land_use_change(land_use_change_dict)
 
-    return {
-        "status": "success",
-        "data": {
-            land_use_change_response
-        }
-    }    
+    # country_data = Country.query.filter_by(name=country).first()
+    # variable = ModelName.query.filter_by(name=country).first()
+    # luc_data = LandUseChangeDefaultDataset.query.filter_by(country=country).first()
+
+
+
+
+    # result = land_use_change_dict['totalArea']["croplandToForestland"] * LAND_USE_CHANGE_CONVERSION_FACTOR
+    # result = land_use_change_dict['total_area']['cropland_to_forestland']*LAND_USE_CHANGE_CONVERSION_FACTOR*luc_data.factor_value
+    # return str(result)
+
+    # return str(luc_data.factor_value)
+    # return result
+
+    # return {
+    #     "status": "success",
+    #     "data": {
+    #         # land_use_change_response
+    #         land_use_change_dict
+    #     }
+    # }    
