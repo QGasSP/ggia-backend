@@ -14,7 +14,7 @@ def calculate_land_use_change(country):
     """     
     calc_result = {}
 
-    country = 'Austria'
+    # country = 'Austria'
 
     land_use = LandUseChangeDefaultDataset.query.filter_by(country=country).all()
 
@@ -26,50 +26,41 @@ def calculate_land_use_change(country):
 def route_land_use_change():
     request_body = humps.decamelize(request.json)
 
+    result_dict = {}
+
     # request object
     land_use_change_dict = request_body["land_use_change"]
 
     country = 'Austria'
 
     # database table
-    luc_data = LandUseChangeDefaultDataset.query.filter_by(country=country).first()
+    luc_data1 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="aboveground_biomass").first()
+    luc_data2 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="belowground_biomass").first()
+    luc_data3 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="dead_wood").first()
+    luc_data4 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="litter").first()
+    luc_data5 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="mineral_soil").first()
+    luc_data6 = LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="organic_soil").first()
 
     # 
     result = land_use_change_dict['total_area']['cropland_to_forestland'] \
         * LAND_USE_CHANGE_CONVERSION_FACTOR \
-            * luc_data.factor_value
+        * luc_data1.factor_value + \
+        land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+        * luc_data2.factor_value + \
+        land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+        * luc_data3.factor_value + \
+        land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+        * luc_data4.factor_value + \
+        land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+        * luc_data5.factor_value + \
+        land_use_change_dict['total_area']['cropland_to_forestland'] \
+        * LAND_USE_CHANGE_CONVERSION_FACTOR \
+        * luc_data6.factor_value                                    
+    
+    result_dict['cropland_to_forestland'] = result
             
-    return str(result)
-
-    # total_area = request_body["totalArea"]
-    # mineral = request_body["mineral"]
-    # organic = request_body["organic"]
-
-    # land_use_change_dict = request_body["landUseChange"]
-    # land_use_change_dict = request_body["land_use_change"]
-    # policy_start_year_dict = request_body["policyStartYear"]
-    # policy_start_year_dict = request_body["policy_start_year"]
-
-    # land_use_change_response = calculate_land_use_change(land_use_change_dict)
-
-    # country_data = Country.query.filter_by(name=country).first()
-    # variable = ModelName.query.filter_by(name=country).first()
-    # luc_data = LandUseChangeDefaultDataset.query.filter_by(country=country).first()
-
-
-
-
-    # result = land_use_change_dict['totalArea']["croplandToForestland"] * LAND_USE_CHANGE_CONVERSION_FACTOR
-    # result = land_use_change_dict['total_area']['cropland_to_forestland']*LAND_USE_CHANGE_CONVERSION_FACTOR*luc_data.factor_value
-    # return str(result)
-
-    # return str(luc_data.factor_value)
-    # return result
-
-    # return {
-    #     "status": "success",
-    #     "data": {
-    #         # land_use_change_response
-    #         land_use_change_dict
-    #     }
-    # }    
+    return str(result_dict)
