@@ -39,20 +39,10 @@ def route_land_use_change():
             land_use_change_dict[LAND_USE_CHANGE_FACTOR_NAMES[key]][land_type] \
             * LAND_USE_CHANGE_CONVERSION_FACTOR \
             * LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion=land_type, factor_name=key).first().factor_value
-            
-    # for land_type in LAND_TYPES_LIST:
-    #     for key in LAND_USE_CHANGE_FACTOR_NAMES.keys():
-    #         result += \
-    #         land_use_change_dict[LAND_USE_CHANGE_FACTOR_NAMES[key]][land_type] \
-    #         * LAND_USE_CHANGE_CONVERSION_FACTOR \
-    #         # * LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="organic_soil").first().factor_value
-            
-# * LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="organic_soil").first().factor_value            
-# LandUseChangeDefaultDataset.query.filter_by(country=country, land_conversion="cropland_to_forestland", factor_name="organic_soil").first()
 
             result_dict[land_type] = result   
           
-    return result_dict
+    return {"land_use_change": result_dict}
 
     # Functionality to implement
     # 1. loops instead of hard-coding dictionary keys
