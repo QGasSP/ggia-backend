@@ -30,8 +30,10 @@ def route_land_use_change():
     # mineral = request_body["mineral"]
     # organic = request_body["organic"]
 
-    land_use_change_dict = request_body["landUseChange"]
-    policy_start_year_dict = request_body["policyStartYear"]
+    # land_use_change_dict = request_body["landUseChange"]
+    land_use_change_dict = request_body["land_use_change"]
+    # policy_start_year_dict = request_body["policyStartYear"]
+    policy_start_year_dict = request_body["policy_start_year"]
 
     land_use_change_response = calculate_land_use_change(land_use_change_dict)
 
