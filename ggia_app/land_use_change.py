@@ -32,7 +32,7 @@ def calculate_land_use_change(country, land_use_change_dict, affected_years, cur
     return result_dict
 
 
-# this fo
+# to modify the land use change calculations in years 21-30
 def calculate_future_years(input_dict, affected_year, start_year):
     pass
 
@@ -52,11 +52,11 @@ def route_land_use_change():
 
     land_use_change_response = dict()
 
-    # for year in range(start_year, 2051): for year in range(start_year, start_year+21):
-    for year in range(start_year, 2051): #
+    # for year in range(start_year, start_year + 21):
+    for year in range(start_year, 2051):
         land_use_change_response[year] = calculate_land_use_change(country, land_use_change_dict, policy_start_years, year)
 
-    # for year in range(start_year+21, start_year+30):
+    # for year in range(start_year + 21, start_year + 30):
     #     pass
     #         # calculate_future_years(input_dict, affected_year, start_year)
           
@@ -68,3 +68,4 @@ def route_land_use_change():
 
     # Functionality to implement
     # 3. years 21-30 use different use the "remaining" factors
+    # 4. add validation to BE calculations
