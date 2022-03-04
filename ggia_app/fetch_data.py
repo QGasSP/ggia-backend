@@ -78,3 +78,15 @@ def fetch_yearly_growth_factors(filename):
         'growth_factor_name': growth_factor_name_list[i],
         'growth_factor_value': growth_factor_value_list[i]}
         for i in range(len(year_list))]
+
+
+def fetch_land_use_change_factors(filename):
+    data = pd.read_csv(filename, sep=",", header=0)
+
+    country_list = list(data['country'])
+    land_conversion_list = list(data['land_conversion'])
+    factor_name = list(data['factor_name'])
+    factor_value = list(data['factor_value'])
+
+    return [{'country': country_list[i], "land_conversion": land_conversion_list[i], 'factor_name': factor_name[i], 'factor_value': factor_value[i]} for i in range(len(country_list))]
+
