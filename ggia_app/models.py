@@ -75,3 +75,22 @@ class YearlyGrowthFactors(db.Model):
 
     def __repr__(self):
         return f"{self.year}:{self.country}:{self.growth_factor_name}:{self.growth_factor_value}"
+
+
+class LandUseChangeDefaultDataset(db.Model):
+    __tablename__ = 'land_use_change_default_dataset'
+
+    id = db.Column(db.Integer, primary_key=True)
+    country = db.Column(db.String)
+    land_conversion = db.Column(db.String)
+    factor_name = db.Column(db.String)
+    factor_value = db.Column(db.Float)
+
+    def __init__(self, country, land_conversion, factor_name, factor_value):
+        self.country = country
+        self.land_conversion = land_conversion
+        self.factor_name = factor_name
+        self.factor_value = factor_value
+
+    def __repr__(self):
+        return f"{self.country}:{self.land_conversion}:{self.factor_name}:{self.factor_value}"
