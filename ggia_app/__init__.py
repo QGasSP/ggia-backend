@@ -2,6 +2,8 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_cors import CORS
 import os
+
+from ggia_app import transport_importer, countries
 from ggia_app.transport import blue_print, calculate_emissions
 from ggia_app.models import db, Country, TransportMode
 from ggia_app.config import *
@@ -35,6 +37,8 @@ def create_app(test_config=None):
     migrate = Migrate(app, db)
 
     app.register_blueprint(transport.blue_print)
+    app.register_blueprint(transport_importer.blue_print)
+    app.register_blueprint(countries.blue_print)
 
     @app.route('/')
     def hello():

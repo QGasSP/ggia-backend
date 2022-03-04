@@ -21,9 +21,16 @@ class NewDevelopment(Schema):
 
 class ModalSplit(Schema):
     shares = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
-    affected_population = fields.Integer()
+    affected_population = fields.Integer(required=False)
     year_start = fields.Integer(required=True, strict=True)
     year_end = fields.Integer(required=True, strict=True)
+
+
+class FuelShares(Schema):
+    types = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
+    year_start = fields.Integer(required=True, strict=True)
+    year_end = fields.Integer(required=True, strict=True)
+    affected_area = fields.Integer()
 
 
 class PolicyQuantification(Schema):
@@ -31,9 +38,12 @@ class PolicyQuantification(Schema):
     freight_transport = fields.Dict(required=True, keys=fields.Str(), values=fields.Float)
     modal_split_passenger = fields.Nested(ModalSplit)
     modal_split_freight = fields.Nested(ModalSplit)
+    fuel_shares_bus = fields.Nested(FuelShares)
+    fuel_shares_car = fields.Nested(FuelShares)
+    electricity_transport = fields.Nested(FuelShares)
 
 
 class Transport(Schema):
     baseline = fields.Nested(Baseline)
     new_development = fields.Nested(NewDevelopment)
-    policy_quantification = fields.Dict(required=False)
+    policy_quantification = fields.Nested(PolicyQuantification)

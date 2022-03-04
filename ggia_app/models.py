@@ -8,10 +8,12 @@ class Country(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    dataset_name = db.Column(db.String)
 
     transport_modes = db.relationship("TransportMode")
 
-    def __init__(self, name):
+    def __init__(self, name, dataset_name):
+        self.dataset_name = dataset_name
         self.name = name
 
     def __repr__(self):

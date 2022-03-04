@@ -458,7 +458,7 @@ def route_new_development():
                }, 400
 
     baseline_result = calculate_baseline(baseline)
-    new_development_result = calculate_new_development(
+    _, new_development_result = calculate_new_development(
         baseline, baseline_result["projections"], new_development)
 
     return {
