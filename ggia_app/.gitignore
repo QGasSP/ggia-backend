@@ -6,5 +6,4 @@ Include
 Lib
 Scripts
 pyvenv.cfg
-
-
+.flaskenv
