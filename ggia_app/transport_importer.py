@@ -84,3 +84,14 @@ def get_template():
 def get_excel():
     return send_file("resources/templates/localdatasetv1.xlsm")
 
+
+@blue_print.route("/local-dataset", methods=["POST"])
+def post_excel():
+    if len(request.data) == 0:
+        return {
+            "status": "invalid"
+        }, 400
+
+    return {
+        "status": "created"
+    }, 201
