@@ -5,7 +5,7 @@ from pandas import DataFrame
 
 from ggia_app.models import Country, TransportMode, YearlyGrowthFactors
 
-blue_print = Blueprint("transport_importer", __name__, url_prefix="/api/v1/import/transport")
+blue_print = Blueprint("importer", __name__, url_prefix="/api/v1/import")
 db = SQLAlchemy()
 
 

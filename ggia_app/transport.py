@@ -123,6 +123,7 @@ def calculate_yearly_projections(country, population, year, emissions):
             annual_transport_growth_factors,
             annual_population,
             emissions[key] * population, year)
+    projections = calculate_total(projections)
 
     projections["population"] = annual_population
 
