@@ -3,10 +3,9 @@ from flask import Blueprint, send_file, request
 from flask_sqlalchemy import SQLAlchemy
 from pandas import DataFrame
 
-from ggia_app.models import Country, TransportMode, YearlyGrowthFactors
+from ggia_app.models import Country, TransportMode, YearlyGrowthFactor, db
 
 blue_print = Blueprint("importer", __name__, url_prefix="/api/v1/import")
-db = SQLAlchemy()
 
 
 def get_transport_modes(request_data):
@@ -44,7 +43,7 @@ def get_yearly_growth_factors_population(request_data, name):
     population_change_list = list()
 
     for year in data.columns[1:]:
-        population_change_list.append(YearlyGrowthFactors(year, name, "annual_population_change", data[year][0]))
+        population_change_list.append(YearlyGrowthFactor(year, name, "annual_population_change", data[year][0]))
 
     return population_change_list
 

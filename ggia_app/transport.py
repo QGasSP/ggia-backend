@@ -105,8 +105,9 @@ def calculate_emissions(country, settlement_distribution):
 
 def calculate_yearly_projections(country, population, year, emissions):
     projections = {}
-    annual_population_growth_factors = YearlyGrowthFactors.query.filter_by(
-        country=country,
+    country = Country.query.filter_by(name=country).first()
+    annual_population_growth_factors = YearlyGrowthFactor.query.filter_by(
+        country_id=country.id,
         growth_factor_name="annual_population_change"
     ).all()
 
@@ -115,8 +116,8 @@ def calculate_yearly_projections(country, population, year, emissions):
     for key in emissions.keys():
         if key == "total":
             continue
-        annual_transport_growth_factors = YearlyGrowthFactors.query.filter_by(
-            country=country,
+        annual_transport_growth_factors = YearlyGrowthFactor.query.filter_by(
+            country_id=country.id,
             growth_factor_name=YEARLY_GROWTH_FACTOR_NAMES[key]
         ).all()
         projections[key] = calculate_projections_by_growth_factors(

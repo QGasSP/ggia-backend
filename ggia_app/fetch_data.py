@@ -1,5 +1,15 @@
 import pandas as pd
 from .env import *
+from ggia_app.models import Country
+
+
+def fetch_countries_from_db(conn):
+    countries = conn.execute("SELECT id, name from countries").fetchall()
+    country_dict = dict()
+    for country in countries:
+        country_dict[country[1]] = country[0]
+
+    return country_dict
 
 
 def fetch_countries(filename):
@@ -63,7 +73,7 @@ def fetch_weights(filename):
         for i in range(len(weight_list))]
 
 
-def fetch_yearly_growth_factors(filename):
+def fetch_yearly_growth_factors(filename, countries):
     data = pd.read_csv(filename, sep=",", header=0)
     data.fillna(0, inplace=True)
 
@@ -74,13 +84,13 @@ def fetch_yearly_growth_factors(filename):
 
     return [{
         'year': year_list[i],
-        'country': country_list[i],
+        'country_id': countries.get(country_list[i], -1),
         'growth_factor_name': growth_factor_name_list[i],
         'growth_factor_value': growth_factor_value_list[i]}
         for i in range(len(year_list))]
 
 
-def fetch_land_use_change_factors(filename):
+def fetch_land_use_change_factors(filename, countries):
     data = pd.read_csv(filename, sep=",", header=0)
 
     country_list = list(data['country'])
@@ -88,5 +98,5 @@ def fetch_land_use_change_factors(filename):
     factor_name = list(data['factor_name'])
     factor_value = list(data['factor_value'])
 
-    return [{'country': country_list[i], "land_conversion": land_conversion_list[i], 'factor_name': factor_name[i], 'factor_value': factor_value[i]} for i in range(len(country_list))]
+    return [{'country_id': countries.get(country_list[i], -1), "land_conversion": land_conversion_list[i], 'factor_name': factor_name[i], 'factor_value': factor_value[i]} for i in range(len(country_list))]
 

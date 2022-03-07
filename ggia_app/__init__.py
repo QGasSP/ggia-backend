@@ -6,7 +6,7 @@ import os
 from ggia_app import transport_importer, countries
 from ggia_app.transport import blue_print, calculate_emissions
 from ggia_app.land_use_change import blue_print, calculate_land_use_change
-from ggia_app.models import db, Country, TransportMode, LandUseChangeDefaultDataset
+from ggia_app.models import db, Country, TransportMode, LandUseChange
 from ggia_app.config import *
 
 
