@@ -37,7 +37,6 @@ def calculate_future_years(input_dict, affected_year, start_year):
     pass
 
 
-
 @blue_print.route("", methods=["GET", "POST"])
 def route_land_use_change():
     request_body = humps.decamelize(request.json)
@@ -60,11 +59,11 @@ def route_land_use_change():
     #     pass
     #         # calculate_future_years(input_dict, affected_year, start_year)
           
-    return {
+    return humps.camelize({
         "status": "success",
         "data": {
             "land_use_change": land_use_change_response}
-    }
+    })
 
     # Functionality to implement
     # 3. years 21-30 use different use the "remaining" factors
