@@ -91,6 +91,27 @@ def post_excel():
             "status": "invalid"
         }, 400
 
+    name = pandas.read_excel(
+        request.data, 'LOCAL DATASET', index_col=None, usecols="B", header=3, nrows=0).columns.values[0]
+
+    data = pandas.read_excel(request.data, sheet_name="UPLOAD", header=1, nrows=3)
+
+    dataset_name = data["name:"][1]
+
+    country = Country.query.get(int(name))
+    new_country = Country(country.name, dataset_name=dataset_name)
+    new_country.transport_modes = country.transport_modes
+    new_country.yearly_growth_factors = country.yearly_growth_factors
+    new_country.land_use_changes = country.land_use_changes
+
+    try:
+        db.session.add(new_country)
+        db.session.commit()
+    except Exception as err:
+        raise err
+    finally:
+        db.session.close()
+
     return {
         "status": "created"
     }, 201
