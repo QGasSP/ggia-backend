@@ -92,6 +92,8 @@ def calculate_emissions(country, settlement_distribution):
 
     emissions = {}
     country_data = Country.query.filter_by(name=country).first()
+    if country_data is None:
+        country_data = Country.query.filter_by(dataset_name=country).first()
 
     for transport_mode in country_data.transport_modes:
         settlement_weights = SettlementWeights.query.filter_by(transit_mode=transport_mode.name).all()
@@ -105,9 +107,12 @@ def calculate_emissions(country, settlement_distribution):
 
 def calculate_yearly_projections(country, population, year, emissions):
     projections = {}
-    country = Country.query.filter_by(name=country).first()
+    country_data = Country.query.filter_by(name=country).first()
+    if country_data is None:
+        country_data = Country.query.filter_by(dataset_name=country).first()
+
     annual_population_growth_factors = YearlyGrowthFactor.query.filter_by(
-        country_id=country.id,
+        country_id=country_data.id,
         growth_factor_name="annual_population_change"
     ).all()
 
@@ -117,7 +122,7 @@ def calculate_yearly_projections(country, population, year, emissions):
         if key == "total":
             continue
         annual_transport_growth_factors = YearlyGrowthFactor.query.filter_by(
-            country_id=country.id,
+            country_id=country_data.id,
             growth_factor_name=YEARLY_GROWTH_FACTOR_NAMES[key]
         ).all()
         projections[key] = calculate_projections_by_growth_factors(

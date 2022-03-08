@@ -14,7 +14,9 @@ def calculate_land_use_change(country, land_use_change_dict, affected_years, cur
     """
     This function takes a dataframe of default values and a country in the list of 32 EU countries and calculates yearly projections for carbon stock change (CSC) for the five land use changes (from_forestland_to_grassland, from_cropland_to_grassland, from_wetland_to_grassland, from_settlements_to_grassland, from_other_land_to_grassland) for a given country and stores it as a dictionary that Flask will return as a JSON object
     """
-    country = Country.query.filter_by(name=country).first()
+    country_data = Country.query.filter_by(name=country).first()
+    if country_data is None:
+        country_data = Country.query.filter_by(dataset_name=country).first()
     result_dict = {}
     
     for land_type in LAND_TYPES_LIST:
@@ -25,7 +27,7 @@ def calculate_land_use_change(country, land_use_change_dict, affected_years, cur
             result += \
                 land_use_change_dict[LAND_USE_CHANGE_FACTOR_NAMES[key]][land_type] \
                 * LAND_USE_CHANGE_CONVERSION_FACTOR \
-                * LandUseChange.query.filter_by(country_id=country.id, land_conversion=land_type, factor_name=key).first().factor_value
+                * LandUseChange.query.filter_by(country_id=country_data.id, land_conversion=land_type, factor_name=key).first().factor_value
 
         result_dict[land_type] = result  
 
