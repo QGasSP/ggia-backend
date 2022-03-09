@@ -73,3 +73,53 @@ PASSENGER_TRANSPORT = [BUS_NAME, CAR_NAME, TRAM_NAME, METRO_NAME, TRAIN_NAME]
 FREIGHT_TRANSPORT = [RAIL_TRANSPORT_NAME, ROAD_TRANSPORT_NAME, WATERWAYS_TRANSPORT_NAME]
 
 MILLION = 1000000
+
+LAND_USE_CHANGE_CONVERSION_FACTOR = -44/12
+
+LAND_USE_CHANGE_FACTOR_NAMES = {
+    "aboveground_biomass": "total_area", 
+    "belowground_biomass": "total_area", 
+    "dead_wood": "total_area", 
+    "litter": "total_area", 
+    "mineral_soil": "mineral", 
+    "organic_soil": "organic"
+}
+
+LAND_TYPES_LIST = [
+    "cropland_to_forestland",
+    "cropland_to_grassland",
+    "cropland_to_otherland",
+    "cropland_to_settlement",
+    "cropland_to_wetland",
+    "forestland_to_cropland",
+    "forestland_to_grassland",
+    "forestland_to_otherland",
+    "forestland_to_settlement",
+    "forestland_to_wetland",
+    "grassland_to_cropland",
+    "grassland_to_forestland",
+    "grassland_to_otherland",
+    "grassland_to_settlement",
+    "grassland_to_wetland",
+    "land_to_peat_extraction",
+    "otherland_to_cropland",
+    "otherland_to_forestland",
+    "otherland_to_grassland",
+    "otherland_to_settlement",
+    "peatland_restoration",
+    "settlement_to_cropland",
+    "settlement_to_forestland",
+    "settlement_to_grassland",
+    "settlement_to_otherland",
+    "wetland_to_cropland",
+    "wetland_to_forestland",
+    "wetland_to_grassland",
+    "wetland_to_otherland",
+    "wetland_to_settlement"]
+    # ,
+    # "forestland_remaining_forestland",
+    # "cropland_remaining_cropland",
+    # "grassland_remaining_grassland",
+    # "peat_extraction_remaining_peat_extraction",
+    # "wetlands_remaining_wetlands (general)",
+    # "settlements_remaining_settlements"]
