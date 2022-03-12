@@ -1,0 +1,165 @@
+{
+    "baseline": {
+        "country": "Poland",
+        "year": 2023,
+        "population": 15000,
+        "residential": {
+            "apartment": 1.0, 
+            "terraced": 100, 
+            "semidetached": 1.0, 
+            "detached": 1.0
+        },
+        "commercial": {
+            "retail": 1.0, 
+            "health": 100, 
+            "hospitality": 1.0, 
+            "offices": 1.0,
+            "industrial": 1.0,
+            "warehouses": 1.0
+        }
+    },
+    "emissions": {
+        "residential": {
+            "apartment": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },
+            "terraced": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },   
+            "semidetached": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },  
+            "detached": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            }                   
+        },
+        "commercial": {
+            "retail": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },
+            "health": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },   
+            "hospitality": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },  
+            "offices": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },
+            "industrial": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            },
+            "warehouses": {
+                "electricity": 1,
+                "gas": 1,
+                "oil": 1,
+                "coal": 1,
+                "peat": 1,
+                "wood": 1,
+                "renewable": 1,
+                "heat": 1
+            }                                 
+        }        
+    },
+    "new_settlement_commercial": {
+        "retail": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        },
+        "health": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        },        
+        "hospitality": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        },        
+        "offices": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        },
+        "industrial": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        },
+        "warehouses": {
+            "floor_area": 1,
+            "num_of_units": 1,
+            "start_year": 2025,
+            "end_year": 2030
+        }
+    }
+}
