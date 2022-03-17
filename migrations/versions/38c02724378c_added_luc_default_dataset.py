@@ -28,7 +28,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
-    op.bulk_insert(land_use_default_dataset, fetch_data.fetch_land_use_change_factors("CSVfiles/land-use-change-default-dataset.csv"))
 
 
 def downgrade():

@@ -8,10 +8,14 @@ class Country(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
+    dataset_name = db.Column(db.String)
 
     transport_modes = db.relationship("TransportMode")
+    yearly_growth_factors = db.relationship("YearlyGrowthFactor")
+    land_use_changes = db.relationship("LandUseChange")
 
-    def __init__(self, name):
+    def __init__(self, name, dataset_name):
+        self.dataset_name = dataset_name
         self.name = name
 
     def __repr__(self):
@@ -21,7 +25,7 @@ class Country(db.Model):
 class TransportMode(db.Model):
     __tablename__ = "transport_modes"
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String)
     passenger_km_per_person = db.Column(db.Float)
     average_occupancy = db.Column(db.Float)
@@ -42,7 +46,7 @@ class TransportMode(db.Model):
 class SettlementWeights(db.Model):
     __tablename__ = 'settlement_weights'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     transit_mode = db.Column(db.String)
     settlement_type = db.Column(db.String)
     settlement_weight = db.Column(db.Float)
@@ -56,14 +60,15 @@ class SettlementWeights(db.Model):
         return f"{self.transit_mode}:{self.settlement_type}:{self.settlement_weight}"
 
 
-class YearlyGrowthFactors(db.Model):
+class YearlyGrowthFactor(db.Model):
     __tablename__ = 'yearly_growth_factors'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     year = db.Column(db.Integer)
-    country = db.Column(db.String)
     growth_factor_name = db.Column(db.String)
     growth_factor_value = db.Column(db.Float)
+
+    country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
 
     def __init__(self, year, country, growth_factor_name, growth_factor_value):
         self.year = year
@@ -75,14 +80,16 @@ class YearlyGrowthFactors(db.Model):
         return f"{self.year}:{self.country}:{self.growth_factor_name}:{self.growth_factor_value}"
 
 
-class LandUseChangeDefaultDataset(db.Model):
-    __tablename__ = 'land_use_change_default_dataset'
+class LandUseChange(db.Model):
+    __tablename__ = 'land_use_changes'
 
-    id = db.Column(db.Integer, primary_key=True)
-    country = db.Column(db.String)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
     land_conversion = db.Column(db.String)
     factor_name = db.Column(db.String)
     factor_value = db.Column(db.Float)
+
+    country_id = db.Column(db.Integer, db.ForeignKey('countries.id'))
 
     def __init__(self, country, land_conversion, factor_name, factor_value):
         self.country = country
