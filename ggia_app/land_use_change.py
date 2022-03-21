@@ -22,7 +22,7 @@ def calculate_land_use_change(country, land_use_change_dict, affected_years, cur
     for land_type in LAND_TYPES_LIST:
         result = 0
         for key in LAND_USE_CHANGE_FACTOR_NAMES.keys():
-            if affected_years.get(land_type, current_year) < current_year:
+            if affected_years.get(land_type, current_year) > current_year:
                 continue
 
             try:
@@ -81,8 +81,6 @@ def route_land_use_change():
     start_year = request_body["year"]
     policy_start_years = request_body["policy_start_year"]
     land_use_change_dict = request_body["land_use_change"]
-    land_use_change_dict = request_body["land_use_change"]
-    land_use_change_dict = request_body["land_use_change"]
 
     land_use_change_response = dict()
 
@@ -90,7 +88,7 @@ def route_land_use_change():
     # for year in range(start_year, 2051):
         land_use_change_response[year] = calculate_land_use_change(country, land_use_change_dict, policy_start_years, year)
 
-    for year in range(start_year + 21, 2050):
+    for year in range(start_year + 21, 2051):
         # pass
         land_use_change_response[year] = calculate_land_use_change_21_to_30(country, land_use_change_dict, policy_start_years, year)
           
@@ -102,4 +100,4 @@ def route_land_use_change():
 
     # Functionality to implement
     # 3. years 21-30 use different use the "remaining" factors
-    # 4. add validation to BE calculations
+    # 4. certain land types are 0 after the first year
