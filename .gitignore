@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 venv/
 /.idea
 
@@ -14,9 +13,10 @@ htmlcov/
 dist/
 build/
 *.egg-info/
-=======
 # ignore .ipynb_checkpoints folder
 .ipynb_checkpoints
 .idea
 
 .flaskenv
+
+.vscode/
