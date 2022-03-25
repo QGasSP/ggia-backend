@@ -1033,9 +1033,6 @@ def testcase_peter_planner():
     country = "County_Meath"
     policy_label = "BL"
 
-    df_main = baseline_main
-    df_area = baseline_area
-
     ###
     #x = np.arange(list(range(2020,2050)))
     # plot bars
@@ -1043,12 +1040,12 @@ def testcase_peter_planner():
     labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
     sectors = list(IW_SECTORS_T.columns)
 
-    bottom = len(df_main) * [0]
+    bottom = len(baseline_main) * [0]
     for idx, name in enumerate(sectors):
-        plt.bar(df_main.index, df_main[name], bottom=bottom)
-        bottom = bottom + df_main[name]
+        plt.bar(baseline_main.index, baseline_main[name], bottom=bottom)
+        bottom = bottom + baseline_main[name]
 
-    plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+    plt.bar(baseline_main.index, baseline_main['Total_Emissions'], edgecolor='black', color='none')
 
     axis.set_title("Annual Household Emissions for %s" % country, fontsize=20)
     axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
@@ -1072,19 +1069,19 @@ def testcase_peter_planner():
     # more graphs
 
     width = 0.2
-    x = np.arange(len(County_Meath_Emissions_BL.columns))
+    x = np.arange(len(baseline_main.columns))
 
     fig, axis = plt.subplots(figsize=(15, 10))
 
     rects1 = axis.bar(
-        x + 0 * width, County_Meath_Emissions_BL.loc[2025], width, label='BL')
+        x + 0 * width, baseline_main.loc[2025], width, label='BL')
     # Extra policies
     rects2 = axis.bar(x - 1.5 * width,
-                    County_Meath_Emissions_P1.loc[2025], width, label='P1')
-    # Extra Policies
-    rects3 = axis.bar(x + 1.5 * width,
-                    County_Meath_Emissions_P2.loc[2025], width, label='P2')
-    # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], width, label='NA')  # Extra Policies
+                    policy_main.loc[2025], width, label='P1')
+    # # Extra Policies
+    # rects3 = axis.bar(x + 1.5 * width,
+    #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
+    # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], width, label='NA')  # Extra Policies
 
 
     #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5,  color='green')
@@ -1095,7 +1092,7 @@ def testcase_peter_planner():
     axis.set_title(
         'Per capita emissions by sector for County Meath policies', fontsize=25)
     axis.set_xticks(x)
-    axis.set_xticklabels(County_Meath_Emissions_BL.columns, fontsize=15)
+    axis.set_xticklabels(baseline_main.columns, fontsize=15)
     #ax.set_yticklabels( fontsize = 15)
     axis.tick_params(axis="y", labelsize=15)
     axis.legend(prop={'size': 15})
@@ -1108,7 +1105,7 @@ def testcase_peter_planner():
     #lt.ylabel("CO2 eq /  kG?")
     #lt.title("Global Emissions by Sector")
 
-    plt.xticks(x, County_Meath_Emissions_BL.columns, rotation=90)
+    plt.xticks(x, baseline_main.columns, rotation=90)
 
     #plt.savefig("Sectoral_Graphs_breakdown.jpg",bbox_inches='tight', dpi=300)
 
@@ -1119,11 +1116,12 @@ def testcase_peter_planner():
 
     # This calculates the different cumulative emissions
     # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]   #THIS is just all the policies I made
-    Policy_labels = ["BL", "P1", "P2"]
+#    policy_labels = ["BL", "P1", "P2"]
+    policy_labels = ["BL", "P1"]
     # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
     region = "County_Meath"
-    for policy in Policy_labels:
-
+    for policy in policy_labels:
+        # TODO: no idea what is going here - I hope Peter knows
         locals()[region + "_summed_" + policy] = pd.DataFrame(np.zeros((30, 1)),
                                                             index=list(range(2020, 2050)), columns=["Summed_Emissions"])
 
@@ -1147,11 +1145,11 @@ def testcase_peter_planner():
     # Name of country Emissions
     country = "County_Meath"
     # Policy_labels = ["BL","EVx50", "MSx50", "SHx50", "NA"]
-    Policy_labels = ["BL", "P1", "P2"]
+    policy_labels = ["BL", "P1", "P2"]
 
 
     counter = 0
-    for policy in Policy_labels:
+    for policy in policy_labels:
         dataframe = locals()[country + "_summed_" + policy].copy()
 
         ###
@@ -1166,9 +1164,9 @@ def testcase_peter_planner():
         #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
         #  bottom = bottom + self.df_main[name]
 
-        plt.plot(self.df_main.index, self.df_main.Summed_Emissions, )
+        plt.plot(dataframe.index, dataframe.Summed_Emissions, )
 
-        plt.fill_between(self.df_main.index, self.df_main.Summed_Emissions, alpha=0.4)  # +counter)
+        plt.fill_between(dataframe.index, dataframe.Summed_Emissions, alpha=0.4)  # +counter)
 
         counter += 0.1
 
@@ -1184,16 +1182,16 @@ def testcase_peter_planner():
     axis.set_xlabel('Year', fontsize=15)
     axis.tick_params(axis="x", labelsize=15)
 
-    axis.legend(Policy_labels, loc='upper left', ncol=2, prop={'size': 15})
+    axis.legend(policy_labels, loc='upper left', ncol=2, prop={'size': 15})
 
     #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
 
     plt.show()
 
-    print("County_Meath_Emissions_P1", County_Meath_Emissions_P1)
+    print("County_Meath_Emissions_baseline", baseline_main)
 
-    print("County_Meath_Emissions_P4", County_Meath_Emissions_P4)
+    print("County_Meath_Emissions_policy", policy_main)
 
 
 def main():
