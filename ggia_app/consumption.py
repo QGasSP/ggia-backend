@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 # they are easy to spot due to capital spelling
 
 ## CSV imports
-CSV_PATH = os.path.join("..", "CSVfiles", "consumption", "")
+CSV_PATH = os.path.join("CSVfiles", "consumption", "")
 
 # Load the projections for income and house size
 HOUSE_SIZE_PROJ_T = pd.read_csv(CSV_PATH + "House_proj_exio.csv", index_col=0)
@@ -133,6 +133,12 @@ MOTOR_VEHICLES = 'Motor vehicles, trailers and semi-trailers (34)'
 SALE_REPAIR_VEHICLES = ('Sale, maintenance, repair of motor vehicles, motor vehicles parts, '
     'motorcycles, motor cycles parts and accessoiries')
 
+PUBLIC_TRANSPORT = [
+    'Railway transportation services',
+    'Other land transportation services',
+    'Sea and coastal water transportation services',
+    'Inland water transportation services'] 
+
 WOOD_PRODUCTS=('Wood and products of wood and cork (except furniture); '
     'articles of straw and plaiting materials (20)')
 
@@ -205,8 +211,7 @@ class Consumption:
     abbrev = str()      # This can be combined with the one above
 
     target_area = str()  # Required #3 options in dropdown menu
-    # TODO: check, is the following the same as U_type - then average is missing and mixed is too much
-    area_type = str()   # Required #4_options in drop down menu - mixed, rural, city, town
+    area_type = str()   # Required #4_options in drop down menu - average, rural, city, town (former U_type)
     pop_size = int()  # Required - completely open
 
 
@@ -278,14 +283,14 @@ class Consumption:
     ## end of policy variables ##
 
     def __init__(self, year, country, pop_size, 
-            region=country,
+            region=None, # region is just a name for working on a specific subset of a country
             area_type="average",
             income_choice = "3rd_household",
             eff_scaler="normal"
             ):
 
         self.year = year
-        self.country = country  # TODO: straighten out regions and countries
+        self.country = country
         self.abbrev = COUNTRY_ABBREVIATIONS[country]
         self.pop_size = pop_size
         self.region = region
@@ -320,21 +325,9 @@ class Consumption:
 
         ##############################################################
         # Forming data for the calculations
-        
-        # # These are needed for holding the results TODO: check are they referenced anywhere?
-        # self.df_main = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
-        #                 columns=IW_SECTORS_T.columns)  # Holds final data in sectors 7 (+ sum)
-
-        # self.df_tot = pd.DataFrame(np.zeros((30, 200)), index=list(range(2020, 2050)),
-        #                     columns=PRODUCT_COUNT)  # holds final data in products (200)
-
-        # self.df_area = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
-        #                     columns=IW_SECTORS_T.columns)  # Holds area emissions (multiplies by pop_size
 
         self.direct_ab = "direct_"+self.abbrev
         self.indirect_ab = "indirect_"+self.abbrev
-        ## TODO: is this doing anything - not assigned! -> just debugging?
-        #EMISSION_COUNTRIES_T.loc[self.direct_ab:self.indirect_ab, :].copy()
 
         # Here the emission intensities are selected
         self.emission_intensities = \
@@ -351,7 +344,7 @@ class Consumption:
         # Baseline Modifications go here  ##Possibly not included in this version of the tool
         ################ end of the mandatory questions #######################
 
-        self.elec_total = demand_kv[ELECTRICITY_TYPES].sum()
+        self.elec_total = self.demand_kv[ELECTRICITY_TYPES].sum()
 
         self.electricity_heat = (self.adjustable_amounts["elec_water"] \
             + self.adjustable_amounts["elec_heat"] \
@@ -511,7 +504,6 @@ class Consumption:
         - ad["elec_water"]
         - ad["elec_heat"]
         - ad["elec_cool"]
-        - district
 
         Local Inputs:
         - demand_kv <- all liquids, solids, and gases, electricity entries
@@ -565,7 +557,7 @@ class Consumption:
         The public transport is also increased by a different amount. This is to account for the effects of active travel
 
         Global Inputs:
-        - public_transport - list of labels TODO: public_transport is nowhere defined
+        - PUBLIC_TRANSPORT
 
         Local Inputs:
         - demand_kv[GAS_DIESEL_OIL]
@@ -594,7 +586,7 @@ class Consumption:
         for vehicle in [MOTOR_VEHICLES, SALE_REPAIR_VEHICLES]:
             demand_kv[vehicle] *= (1-scaler_3)
 
-        for transport in public_transport:  # Public transport was defined above
+        for transport in PUBLIC_TRANSPORT:  # Public transport was defined above
             demand_kv[transport] *= (1+scaler_2)
 
 
@@ -733,6 +725,207 @@ class Consumption:
         # 1.0475 # USER_INPUT
         ab_m.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
 
+    # 
+    def emission_calculation(self,
+        policy_year=None, # U10.1
+        pop_size_policy=None, # U10.2
+        new_floor_area=0, # U10.3
+        eff_gain=False,  # U11.1.0
+        eff_scaler=0,  # U11.1.1
+        local_electricity=False,  # U11.2.0
+        # U11.2.1  'Electricity by solar photovoltaic','Electricity by biomass and waste',
+        # 'Electricity by wind','Electricity by Geothermal'
+        el_type = 'Electricity by solar photovoltaic',
+        el_scaler = 0,  # U11.2.2
+        s_heating = False,  # U11.3.0
+        biofuel_takeup = False,  # U12.1.0
+        bio_scaler = 0,  # U12.1.1
+        ev_takeup = False,  # U12.2.0
+        ev_scaler = 0,  # U12.2.1
+        modal_shift = False,  # U12.3.0
+        ms_fuel_scaler = 0,  # U12.3.1
+        ms_veh_scaler = 0,  # U12.3.2
+        ms_pt_scaler = 0,  # U12.3.3   
+        ):
+        """
+        This function can compute both a baseline, but also a six policies on an
+        initialized consumption object.
+        """
+
+        if policy_year is None:
+            policy_year=self.year
+
+        if pop_size_policy is None:
+            pop_size_policy = self.pop_size
+
+        # if anything will be modified, this is not a baseline - TODO: check with Peter
+        is_baseline = not (eff_gain or local_electricity or s_heating or ev_takeup or modal_shift)
+
+        # Scale factor applied to income - unique value for each decade
+        income_scaling = INCOME_PROJ_T.loc[self.country]
+
+        # Scale factor applied to household size - unique value for each decade
+        house_scaling = HOUSE_SIZE_PROJ_T.loc[self.country]
+
+        # prepare empty dataframes
+        # these are for the graphs
+        df_main = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
+                        columns=IW_SECTORS_T.columns)  # Holds final data in sectors 7 (+ sum)
+
+        # df_tot = pd.DataFrame(np.zeros((30, 200)), index=list(range(2020, 2050)),
+        #                     columns=PRODUCT_COUNT)  # holds final data in products (200)
+
+        df_area = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
+                            columns=IW_SECTORS_T.columns)  # Holds area emissions 
+                                                        # (multiplies by pop_size)
+
+
+        for year_it in range(self.year, 2051):  # baseline year to 2050 (included)
+
+            # check the policy part
+
+            # if year_it == 2020:
+
+            #     income_mult = 1 # This is just for the year 2020
+            #     house_mult = 1  # This is just for the year 2020
+            #     eff_factor = 1  # This is just for the year 2020
+
+            ###########Policies are from here#####################################
+            if not is_baseline and year_it == policy_year:
+
+                #demand_kv = demand_kv_policy
+                # house_size_ab = house_size_ab_policy  #Because we are not asking these questions
+                pop_size = pop_size_policy
+
+                ##############Household Efficiency################################
+
+                if eff_gain:
+                    self.eff_improvements(eff_scaler)
+
+                ##############Local_Electricity###################################
+                #######################U11.2######################################
+
+                if local_electricity:
+                    self.local_generation(self.emission_intensities, el_scaler, el_type)
+
+                # TODO: district_value is never set in input material - check with Peter
+                # district_value = ab_M.loc[direct_ab,district].sum() #copied from elsewhere
+                self.district_value=0 # or given?
+                if s_heating:
+                    self.local_heating(self.emission_intensities, self.district_prop,
+                        self.electricity_heat_prop, self.combustable_fuels_prop,
+                        self.liquids_prop, self.gases_prop, self.solids_prop,
+                        self.district_value) # TODO: check district_value is never set
+
+                ###########Biofuel_in_transport####################
+                if biofuel_takeup:
+                    self.biofuels(bio_scaler)
+
+                ########Electric_Vehicles##########################################
+                ###### U12.2#############
+                if ev_takeup:
+                    self.electric_vehicles(ev_scaler)
+
+                #########Modal_Shift####################################################
+                #########U12.3#################
+                if modal_shift:
+                    self.transport_modal_shift(ms_fuel_scaler, ms_pt_scaler, ms_veh_scaler)
+
+            if year_it > 2020 and year_it <= 2030:
+                # Select the income multiplier for this decade
+                income_mult = income_scaling['2020-2030']
+                # Select the house multiplier for this decade
+                house_mult = house_scaling['2020-2030']
+                eff_factor = self.eff_scaling
+
+            if year_it > 2030 and year_it <= 2040:
+                # Select the income multiplier for this decade
+                income_mult = income_scaling['2030-2040']
+                # Select the house multiplier for this decade
+                house_mult = house_scaling['2030-2040']
+                eff_factor = self.eff_scaling
+
+            if year_it > 2040 and year_it <= 2050:
+                # Select the income multiplier for this decade
+                income_mult = income_scaling['2040-2050']
+                # Select the house multiplier for this decade
+                house_mult = house_scaling['2040-2050']
+                eff_factor = self.eff_scaling
+
+            self.demand_kv *= income_mult
+
+            self.emission_intensities *= eff_factor
+            self.use_phase_ab *= eff_factor
+            self.tail_pipe_ab *= eff_factor
+
+            # Then we have to recalculate
+            # GWP: Global Warming Potential (could be also called Emissions)
+
+            gwp_ab = pd.DataFrame(self.emission_intensities.to_numpy().dot(
+                np.diag(self.demand_kv.to_numpy())))  # This is the basic calculation
+            gwp_ab.index = ['direct', 'indirect']
+            gwp_ab.columns = PRODUCT_COUNT
+            # This adds in the household heating fuel use
+            use_phase_ab_gwp = self.demand_kv * self.use_phase_ab
+            # This adds in the burning of fuel for cars
+            tail_pipe_ab_gwp = self.demand_kv * self.tail_pipe_ab
+            # This puts together in the same table (200 x 1)
+            total_use_ab = tail_pipe_ab_gwp.fillna(0) + use_phase_ab_gwp.fillna(0)
+            # all of the other 200 products are zero
+            # Put together the IO and use phase
+            gwp_ab.loc['Use phase', :] = total_use_ab
+
+            #GWP_EE_pc = GWP_EE/House_size_EE
+            # print(year_it)
+
+            #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
+            gwp_ab_pc = gwp_ab / (self.house_size_ab * house_mult)
+
+            # Put the results into sectors
+            df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
+            # self.df_tot.loc[year_it] = gwp_ab_pc.sum()
+            df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
+                gwp_ab_pc.sum().to_numpy()) * self.pop_size # TODO: check which pop_size should be used here? base or policy
+
+        df_main['Total_Emissions'] = df_main.sum(axis=1)
+        df_area['Total_Emissions'] = df_area.sum(axis=1)
+
+
+        ###########################################################################################################
+        # New Construction Emissions part!
+        #################################################################################################################
+
+        if not is_baseline:
+            building_emissions = 0
+
+            if self.country in NORTH:
+                building_emissions = 350 * new_floor_area/pop_size
+
+            if self.country in WEST:
+                building_emissions = 520 * new_floor_area/pop_size
+
+            if self.country in EAST:
+                building_emissions = 580 * new_floor_area/pop_size
+
+            df_main.loc[policy_year, 'Total_Emissions'] += building_emissions
+            df_area.loc[policy_year, 'Total_Emissions'] += building_emissions * pop_size
+
+
+        ##############################################################################################################
+        # End of Construction Emissions part!
+        #############################################################################################################
+        # Adding total emissions by multiplying by population
+        
+        # F_tot.columns = Exio_products
+        result1 = df_main.copy()
+        # locals()[region + "_Emissions_tot_" + policy_label] = DF_tot.copy()
+
+        result2 = df_area.copy()
+
+        return (result1, result2)
+
+        ### end of emission calculation function ###
+
 
     ###################### end of policy methods/functions  ###################################
 
@@ -789,274 +982,81 @@ def testcase_peter_planner():
     """
     Just a test case corresponding to the story
     """
-    baseline = Consumption(
+    calculation = Consumption(
         year=2022, # required
         country="Ireland", # required
         pop_size=195000, # required
-        region="County_Meath", # defaults to country TODO: is that ok? How to handle? Needed at all?
+        region="County_Meath", # optional (else undefined)
         # area_type = "average",  # U9.4: average*, town, city, rural
         # eff_scaler = "normal", # U9.5: fast, normal*, slow
         )
 
+    # baseline
+    baseline_main, baseline_area = calculation.emission_calculation()
 
-    # Here, we are essentially just asking the questions we asked for the BL again.
-    # The problem is that before the policy year (in this case 2025), the values should 
-    # be equal to the baseline. So I have just redefined the variables here.
-    # But for the tool if all variables are predefined and then sent to a function to run the
-    # calculation, would they need to be new variables?
-    # TODO: what does that mean?
 
-    policy = Consumption(
-        # TODO: check: do we just do the thing starting at 2025 or is policy_year something completely new?
-        year=2025, # U10.1: required
-        country=baseline.country, # taking the last one
-        pop_size=205000, # U10.2: required TODO: check: or pop_size_policy???
-        region=baseline.region, # TODO: Needed at all?
+    policy_main, policy_area  = calculation.emission_calculation(
+        policy_year=2025,
+        pop_size_policy=205000,
+        new_floor_area=0, # U10.3
+        el_type = 'Electricity by solar photovoltaic', # U11.2.1
+        el_scaler = 0.5,  # U11.2.2
+        # s_heating = False,  # U11.3.0
+        # # the following are already defined
+        # # district_prop = 0.25 #USER_INPUT  U11.3.1
+        # # electricity_heat_prop = 0.75 #USER_INPUT
+        # # combustable_fuels_prop = 0.25 #USER_INPUT
+
+        # # solids_prop = 0.0 #USER_INPUT   U11.3.2
+        # # gases_prop = 0.0 #USER_INPUT
+        # # liquids_prop = 0.0 #USER_INPUT
+        # # District_value = ab_M.loc[direct_ab,district].sum() # ab_M   0.0 # USER_INPUT  U11.3.3
+        # biofuel_takeup = False,  # U12.1.0
+        # bio_scaler = 0.5,  # 12.1.1
+        # ev_takeup = False, # U12.2.0
+        # ev_scaler = 0.5,  # U12.2.1
+        # modal_shift = False,  # U12.3.0
+        # ms_fuel_scaler = 0.5,  # U12.3.1
+        # ms_veh_scaler = 0.5,  # U12.3.2
+        # ms_pt_scaler = 0.2,  # U12.3.3
         )
 
-    # TODO: continue here
-    
-    # Question 10:
-    # U10.1
-    policy_year = 2025  # USER_INPUT
-
-    # U10.2
-    # Population_size
-    pop_size_policy = 205000  # USER_INPUT
-
-
-    ##############################################
-    #     NEW PART FOR THE CONSTRUCTION EMISSIONS!
-    #######################################################
-    ## Construction emissions#############################################################################################
-
-    ##U 10.3#############################################
-
-    new_floor_area = 0   # USER_INPUT
-    # END OF PART FOR THE CONSTRUCTION EMISSIONS!
-
-
-    ###############################################################
-    #############The actual calculation starts here################
-    ###############################################################
-
-    # Scale factor applied to income - unique value for each decade
-    income_scaling = INCOME_PROJ_T.loc[country]
-    # Scale factor applied to household size - unique value for each decade
-    house_scaling = HOUSE_SIZE_PROJ_T.loc[country]
-
-    # Questions should be asked in this order! Some depend on the results of others
-    EFF_gain = False  # USER_INPUT U11.1.0
-    EFF_scaler = 0.5  # USER_INPUT   U11.1.1
-    local_electricity = False  # USER_INPUT  U11.2.0
-    # USER_INPUT U11.2.1  'Electricity by solar photovoltaic','Electricity by biomass and waste','Electricity by wind','Electricity by Geothermal'
-    el_type = 'Electricity by solar photovoltaic'
-    el_scaler = 0.5  # User_Input U11.2.2
-
-    s_heating = False  # USER_INPUT   U11.3.0
-
-    # the following are already defined
-    # district_prop = 0.25 #USER_INPUT  U11.3.1
-    # electricity_heat_prop = 0.75 #USER_INPUT
-    # combustable_fuels_prop = 0.25 #USER_INPUT
-
-    # solids_prop = 0.0 #USER_INPUT   U11.3.2
-    # gases_prop = 0.0 #USER_INPUT
-    # liquids_prop = 0.0 #USER_INPUT
-
-
-    # District_value = ab_M.loc[direct_ab,district].sum()# ab_M   0.0 # USER_INPUT  U11.3.3
-
-    biofuel_takeup = False  # USER_INPUT  U12.1.0
-    bio_scaler = 0.5  # USER_INPUT      U12.1.1
-
-    ev_takeup = False  # USER_INPUT  U12.2.0
-    ev_scaler = 0.5  # User_Input U12.2.1
-
-    modal_shift = False  # USER_INPUT U12.3.0
-    ms_fuel_scaler = 0.5  # USER_INPUT U12.3.1
-    ms_veh_scaler = 0.5  # USER_INPUT U12.3.2
-    ms_pt_scaler = 0.2  # USER_INPUT U12.3.3
-
-
-    for year_it in range(year, 2051):  # baseline year to 2050 (included)
-
-        # check the policy part
-
-        # if year_it == 2020:
-
-        #     income_mult = 1 # This is just for the year 2020
-        #     house_mult = 1  # This is just for the year 2020
-        #     eff_factor = 1  # This is just for the year 2020
-
-        ###########Policies are from here################################################################
-        if policy_label != "BL" and year_it == policy_year:  # & policy_label != "BL":
-
-            #demand_kv = demand_kv_policy
-            # house_size_ab = house_size_ab_policy  #Because we are not asking these questions
-            pop_size = pop_size_policy
-
-            ##############Household Efficiency###################################################
-
-            if EFF_gain:
-                eff_improvements(demand_kv, EFF_scaler)
-
-            ##############Local_Electricity########################################################################################
-            ######################U11.2######################################
-
-            if local_electricity:
-                local_generation(emission_intensities,
-                                demand_kv, el_scaler, el_type)
-
-            if s_heating:
-                local_heating(emission_intensities, demand_kv, district_prop, electricity_heat_prop,
-                            combustable_fuels_prop, liquids_prop, gases_prop, solids_prop, District_value)
-
-            ###########Biofuel_in_transport########################################################################################
-            ########### U12.1##############
-
-            if biofuel_takeup:
-                biofuels(demand_kv, bio_scaler)
-
-            ########Electric_Vehicles##################################################################################################
-            ###### U12.2#############
-
-            if ev_takeup:
-                electric_vehicles(demand_kv, ev_scaler)
-
-            #########Modal_Shift#######################################################################################################
-            #########U12.3#################
-
-            if modal_shift:
-                transport_modal_shift(demand_kv, ms_fuel_scaler,
-                                    ms_pt_scaler, ms_veh_scaler)
-
-        if year_it > 2020 and year_it <= 2030:
-            # Select the income multiplier for this decade
-            income_mult = income_scaling['2020-2030']
-            # Select the house multiplier for this decade
-            house_mult = house_scaling['2020-2030']
-            eff_factor = eff_scaling
-
-        if year_it > 2030 and year_it <= 2040:
-            # Select the income multiplier for this decade
-            income_mult = income_scaling['2030-2040']
-            # Select the house multiplier for this decade
-            house_mult = house_scaling['2030-2040']
-            eff_factor = eff_scaling
-
-        if year_it > 2040 and year_it <= 2050:
-            # Select the income multiplier for this decade
-            income_mult = income_scaling['2040-2050']
-            # Select the house multiplier for this decade
-            house_mult = house_scaling['2040-2050']
-            eff_factor = eff_scaling
-
-        demand_kv *= income_mult
-
-        emission_intensities *= eff_factor
-        self.use_phase_ab *= eff_factor
-        self.tail_pipe_ab *= eff_factor
-
-        # Then we have to recalculate
-        # GWP: Global Warming Potential (could be also called Emissions)
-
-        GWP_ab = pd.DataFrame(emission_intensities.to_numpy().dot(
-            np.diag(demand_kv.to_numpy())))  # This is the basic calculation
-        GWP_ab.index = ['direct', 'indirect']
-        GWP_ab.columns = PRODUCT_COUNT
-        # This adds in the household heating fuel use
-        Use_phase_ab_GWP = demand_kv * self.use_phase_ab
-        # This adds in the burning of fuel for cars
-        Tail_pipe_ab_GWP = demand_kv * self.tail_pipe_ab
-        # This puts together in the same table (200 x 1)
-        Total_use_ab = Tail_pipe_ab_GWP.fillna(0) + Use_phase_ab_GWP.fillna(0)
-        # all of the other 200 products are zero
-        # Put together the IO and use phase
-        GWP_ab.loc['Use phase', :] = Total_use_ab
-
-        #GWP_EE_pc = GWP_EE/House_size_EE
-        # print(year_it)
-
-        #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
-        GWP_ab_pc = GWP_ab / (self.house_size_ab * house_mult)
-
-        # Put the results into sectors
-        DF.loc[year_it] = IW_SECTORS_NP_TR_T.dot(GWP_ab_pc.sum().to_numpy())
-        DF_tot.loc[year_it] = GWP_ab_pc.sum()
-        DF_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
-            GWP_ab_pc.sum().to_numpy()) * pop_size
-
-    DF['Total_Emissions'] = DF.sum(axis=1)
-    DF_area['Total_Emissions'] = DF_area.sum(axis=1)
-
-
-    ###########################################################################################################
-    # New Construction Emissions part!
-    #################################################################################################################
-
-    if policy_label != "BL":
-        if country in NORTH:
-            Building_Emissions = 350 * new_floor_area/pop_size
-
-        if country in WEST:
-            Building_Emissions = 520 * new_floor_area/pop_size
-
-        if country in EAST:
-            Building_Emissions = 580 * new_floor_area/pop_size
-
-        DF.loc[policy_year, 'Total_Emissions'] += Building_Emissions
-        DF_area.loc[policy_year,
-                    'Total_Emissions'] += Building_Emissions * pop_size
-
-
-    ##############################################################################################################
-    # End of Construction Emissions part!
-    #############################################################################################################
-    # Adding total emissions by multiplying by population
-
-
-    # F_tot.columns = Exio_products
-    locals()[region + "_Emissions_" + policy_label] = DF
-    locals()[region + "_Emissions_tot_" + policy_label] = DF_tot
-
-    locals()[region + "_Area_Emissions_" + policy_label] = DF_area
-
-    # Graphs are from here
+    ### Graphs are from here
 
     # First Graph is a breakdown of the Emissions as a stacked bar graph. Maybe best to just show this one by itself?
 
     # Describe Emissions over time
     # The construction Emissions are now shown here. I just added very quickly so please make better!
 
-    fig, ax = plt.subplots(1, figsize=(15, 10))
+    fig, axis = plt.subplots(1, figsize=(15, 10))
     # Name of country Emissions
     country = "County_Meath"
     policy_label = "BL"
 
-    DF = locals()[country + "_Emissions_" + policy_label].copy()
+    df_main = baseline_main
+    df_area = baseline_area
 
     ###
     #x = np.arange(list(range(2020,2050)))
     # plot bars
 
-    Labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
+    labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
     sectors = list(IW_SECTORS_T.columns)
 
-    bottom = len(DF) * [0]
+    bottom = len(df_main) * [0]
     for idx, name in enumerate(sectors):
-        plt.bar(DF.index, DF[name], bottom=bottom)
-        bottom = bottom + DF[name]
+        plt.bar(df_main.index, df_main[name], bottom=bottom)
+        bottom = bottom + df_main[name]
 
-    plt.bar(DF.index, DF['Total_Emissions'], edgecolor='black', color='none')
+    plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
 
-    ax.set_title("Annual Household Emissions for %s" % country, fontsize=20)
-    ax.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
-    ax.tick_params(axis="y", labelsize=15)
-    ax.set_xlabel('Year', fontsize=15)
-    ax.tick_params(axis="x", labelsize=15)
+    axis.set_title("Annual Household Emissions for %s" % country, fontsize=20)
+    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+    axis.tick_params(axis="y", labelsize=15)
+    axis.set_xlabel('Year', fontsize=15)
+    axis.tick_params(axis="x", labelsize=15)
 
-    ax.legend(Labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+    axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
 
 
     plt.show()
@@ -1069,36 +1069,36 @@ def testcase_peter_planner():
     # (This is basically only useful for new areas)
 
 
-    # Now_make_graphs_of these
+    # more graphs
 
     width = 0.2
     x = np.arange(len(County_Meath_Emissions_BL.columns))
 
-    fig, ax = plt.subplots(figsize=(15, 10))
+    fig, axis = plt.subplots(figsize=(15, 10))
 
-    rects1 = ax.bar(
+    rects1 = axis.bar(
         x + 0 * width, County_Meath_Emissions_BL.loc[2025], width, label='BL')
     # Extra policies
-    rects2 = ax.bar(x - 1.5 * width,
+    rects2 = axis.bar(x - 1.5 * width,
                     County_Meath_Emissions_P1.loc[2025], width, label='P1')
     # Extra Policies
-    rects3 = ax.bar(x + 1.5 * width,
+    rects3 = axis.bar(x + 1.5 * width,
                     County_Meath_Emissions_P2.loc[2025], width, label='P2')
     # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], width, label='NA')  # Extra Policies
 
 
     #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5,  color='green')
     #plt.bar(x_sectors, E_countries_GWP_sectors_pp['FI'], width = 0.5, color='blue', alpha = 0.5)
-    ax.legend_size = 20
-    ax.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
-    ax.set_xlabel('Emissions sector', fontsize=20)
-    ax.set_title(
+    axis.legend_size = 20
+    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
+    axis.set_xlabel('Emissions sector', fontsize=20)
+    axis.set_title(
         'Per capita emissions by sector for County Meath policies', fontsize=25)
-    ax.set_xticks(x)
-    ax.set_xticklabels(County_Meath_Emissions_BL.columns, fontsize=15)
+    axis.set_xticks(x)
+    axis.set_xticklabels(County_Meath_Emissions_BL.columns, fontsize=15)
     #ax.set_yticklabels( fontsize = 15)
-    ax.tick_params(axis="y", labelsize=15)
-    ax.legend(prop={'size': 15})
+    axis.tick_params(axis="y", labelsize=15)
+    axis.legend(prop={'size': 15})
 
 
     #x.label(rects1, padding=3)
@@ -1143,7 +1143,7 @@ def testcase_peter_planner():
     # Describe Emissions over time
 
 
-    fig, ax = plt.subplots(1, figsize=(15, 10))
+    fig, axis = plt.subplots(1, figsize=(15, 10))
     # Name of country Emissions
     country = "County_Meath"
     # Policy_labels = ["BL","EVx50", "MSx50", "SHx50", "NA"]
@@ -1152,7 +1152,7 @@ def testcase_peter_planner():
 
     counter = 0
     for policy in Policy_labels:
-        DF = locals()[country + "_summed_" + policy].copy()
+        dataframe = locals()[country + "_summed_" + policy].copy()
 
         ###
         #x = np.arange(list(range(2020,2050)))
@@ -1163,12 +1163,12 @@ def testcase_peter_planner():
 
         #bottom = len(DF) * [0]
         # for idx, name in enumerate(sectors):
-        #   plt.bar(DF.index, DF[name], bottom = bottom)
-        #  bottom = bottom + DF[name]
+        #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
+        #  bottom = bottom + self.df_main[name]
 
-        plt.plot(DF.index, DF.Summed_Emissions, )
+        plt.plot(self.df_main.index, self.df_main.Summed_Emissions, )
 
-        plt.fill_between(DF.index, DF.Summed_Emissions, alpha=0.4)  # +counter)
+        plt.fill_between(self.df_main.index, self.df_main.Summed_Emissions, alpha=0.4)  # +counter)
 
         counter += 0.1
 
@@ -1177,14 +1177,14 @@ def testcase_peter_planner():
 
     #rects1 = ax.bar(x, Ireland_Emissions['Housing_Energy'], width, label=abbrev)
 
-    ax.set_title("Aggregated per capita Emissions for %s 2020-2050" %
+    axis.set_title("Aggregated per capita Emissions for %s 2020-2050" %
                 country, fontsize=20)
-    ax.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
-    ax.tick_params(axis="y", labelsize=15)
-    ax.set_xlabel('Year', fontsize=15)
-    ax.tick_params(axis="x", labelsize=15)
+    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+    axis.tick_params(axis="y", labelsize=15)
+    axis.set_xlabel('Year', fontsize=15)
+    axis.tick_params(axis="x", labelsize=15)
 
-    ax.legend(Policy_labels, loc='upper left', ncol=2, prop={'size': 15})
+    axis.legend(Policy_labels, loc='upper left', ncol=2, prop={'size': 15})
 
     #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
@@ -1194,3 +1194,10 @@ def testcase_peter_planner():
     print("County_Meath_Emissions_P1", County_Meath_Emissions_P1)
 
     print("County_Meath_Emissions_P4", County_Meath_Emissions_P4)
+
+
+def main():
+    testcase_peter_planner()
+
+if __name__ == "__main__":
+    main()
