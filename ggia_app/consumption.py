@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 ## constants (mainly strings and labels) and csv tables
 # they are easy to spot due to capital spelling
 
+DELTA_ZERO = 0.00001  # delta to do float zero cut-off
+
 ## CSV imports
 CSV_PATH = os.path.join("CSVfiles", "consumption", "")
 
@@ -187,6 +189,16 @@ COUNTRY_ABBREVIATIONS = {
     'United Kingdom': 'GB',
 }
 
+INCOME_CHOICE_TO_HOUSEHOLD = {
+    0: "3rd_household",
+    1: "1st_household",
+    2: "2nd_household",
+    3: "3rd_household",
+    4: "4th_household",
+    5: "5th_household",
+}
+
+
 class Consumption:
     """
     LIST of originally adjustable variables
@@ -268,7 +280,7 @@ class Consumption:
     solar_thermal_prop = float()
     tide_prop = float()
     geo_prop = float()
-    # Last electricity mix  #These values should sum to 1 (or 100 %)
+    # Last electricity mix  # These values should sum to 1 (or 100 %)
     nec_prop = float()
 
     district_prop = float()
@@ -280,17 +292,26 @@ class Consumption:
     gases_prop = float()                # These 3 values should sum to 1 (or 100 %)
 
     direct_district_emissions = float()  # A default value os given.
+    district_value = float()  # U11.3.3 - percentage - direct emissions from district heating
 
     ## end of policy variables ##
 
     def __init__(self, year, country, pop_size,
             region=None, # region is just a name for working on a specific subset of a country
             area_type="average",
-            income_choice = "3rd_household",
-            eff_scaler="normal"
+            house_size=0.0, # U9.3
+            # income choice should be:
+            # 1 for bottom 20; 1st_household
+            # 2 for 20-40; 2nd_household
+            # 3 or 0 for 40-60, average/unknown; 3rd_household
+            # 4 for 60-80; 4th_household
+            # 5 for top 20; 5th_household
+            income_choice = 0,
+            eff_scaler_initial="normal"
             ):
 
         self.year = year
+        self.policy_year = year  # we want it the same for the baseline
         self.country = country
         self.abbrev = COUNTRY_ABBREVIATIONS[country]
         self.pop_size = pop_size
@@ -300,16 +321,22 @@ class Consumption:
         # initial demand vector
         self.demand_kv = Y_VECTORS[area_type][country].copy()
 
-        # U9.3: House_size - also extracted
-        # This is the default
-        self.house_size_ab = HOUSE_SIZE_T.loc['Average_size_' + area_type, country]
-        # self.house_size_ab = 2.14 #xx###USER_INPUT would look like this here
+        # U9.3: House_size
+        # example: self.house_size = 2.14
+        if house_size < 0.01:
+            # Pick default
+            self.house_size = HOUSE_SIZE_T.loc['Average_size_' + area_type, country]
+        else:
+            self.house_size = house_size
 
         # Otherwise,  the user selects the income level of the household (they choose by quintiles)
-        self.income_choice = income_choice
-        income_scaler = INCOME_SCALING_T.loc[income_choice, country] / \
-            INCOME_SCALING_T.loc['Total_household', country]  # USER_INPUT
+        if income_choice > len(INCOME_CHOICE_TO_HOUSEHOLD) or income_choice<0:
+            income_choice = 0
+        self.income_choice = INCOME_CHOICE_TO_HOUSEHOLD[income_choice]
+        income_scaler = INCOME_SCALING_T.loc[self.income_choice, country] \
+            / INCOME_SCALING_T.loc['Total_household', country]  # USER_INPUT
         elasticity = 1  # Random number for now. It should be specific to country and product
+                        # TODO: do later
 
         # U9.4:Income_scaler
         # options are:
@@ -321,7 +348,7 @@ class Consumption:
 
         # U9.5: This is the expected global reduction in product emissions
         # Suggestion - Just give the user one of three options, with the default being normal
-        self.eff_scaling = 1 - {"fast": 0.07, "normal": 0.03, "slow": 0.01}[eff_scaler]
+        self.eff_scaling = 1 - {"fast": 0.07, "normal": 0.03, "slow": 0.01}[eff_scaler_initial]
 
         ##############################################################
         # Forming data for the calculations
@@ -356,7 +383,7 @@ class Consumption:
             + self.demand_kv[DISTRICT_SERVICE_LABEL].sum() \
             + self.electricity_heat
         
-        # TODO: look at this later -> we assume all 'fuels' are 
+        # TODO: look at this later -> we assume all 'fuels' are
         # the same efficiency (obviously wrong, but no time to fix)
 
 
@@ -501,7 +528,7 @@ class Consumption:
         Take the expenditure on household fuels and reduce it by a scale factor defined by the user
 
         Global Inputs:
-        - district - label
+        - DISTRICT_SERVICE_LABEL - label
         - liquids
         - solids
         - gases
@@ -518,8 +545,7 @@ class Consumption:
         - demand_kv[electricity] - seems this time to be a list of values (as later sum used)
 
         Outputs:
-        - demand_kv[district] - not sure if this is a side effect or not
-
+        - demand_kv[DISTRICT_SERVICE_LABEL] - not sure if this is a side effect or not
         """
 
         demand_kv = self.demand_kv  # shortcut to work on this field
@@ -597,7 +623,7 @@ class Consumption:
             demand_kv[transport] *= (1+scaler_2)
 
 
-    def local_generation(self, ab_m, scaler, elec_type):
+    def local_generation(self, emission_intensities, scaler, elec_type):
         """
         This is a policy.
 
@@ -619,9 +645,8 @@ class Consumption:
         - demand_kv[ELECTRICITY_NEC]
         - M_countries_LCA.loc[direct_ab:indirect_ab,type_electricity]
 
-
         Outputs:
-        - ab_M.loc[direct_ab:indirect_ab,ELECTRICITY_NEC]
+        - emission_intensities.loc[direct_ab:indirect_ab,ELECTRICITY_NEC]
         - demand_kv[ELECTRICITY_NEC] - careful, this means this field is permanently
                                         changed after a call to this method
         """
@@ -636,21 +661,19 @@ class Consumption:
         demand_kv[ELECTRICITY_NEC] = elec_total * scaler
 
         # Set the emission intensity of this based on LCA values
-        ab_m.loc[self.direct_ab:self.indirect_ab, ELECTRICITY_NEC] = \
+        emission_intensities.loc[self.direct_ab:self.indirect_ab, ELECTRICITY_NEC] = \
             EMISSION_COUNTRIES_LCA_T.loc[self.direct_ab:self.indirect_ab, elec_type]
 
 
-    def local_heating(self, ab_m, district_prop, elec_heat_prop,
+    def local_heating(self, emission_intensities, district_prop, elec_heat_prop,
                     combustable_fuels_prop, liquids_prop,
                     gas_prop, solids_prop, district_val):
         """
-        Is this a policy? It has a lot of nice input values.
-
         THIS JUST REPEATS BASELINE QUESTIONS 9 - 10.
         ALLOWING THE USER TO CHANGE THE VALUES
 
         Global Inputs:
-        - district
+        - DISTRICT_SERVICE_LABEL
         - direct_ab
         - total_fuel
         - electricity: here it's used a field of labels again
@@ -672,7 +695,7 @@ class Consumption:
           Careful, this means these fields are permanently changed after a call to this method
         - demand_kv[WOOD_PRODUCTS]
         - demand_kv[DISTRIBUTION_GAS]
-        - ab_M.loc[direct_ab,district]
+        - emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL]
           Careful, this means this field is permanently changed after a call to this method
         """
 
@@ -721,47 +744,86 @@ class Consumption:
             if gasses_sum != 0:
                 # Amount of each gas in total gas expenditure
                 prop = demand_kv[gas] / gasses_sum
-                demand_kv[gas] = prop * self.gases_prop * \
+                demand_kv[gas] = prop * gas_prop * \
                     combustable_fuels_prop * self.total_fuel
 
             else:
-                demand_kv[DISTRIBUTION_GAS] = self.gases_prop * \
+                demand_kv[DISTRIBUTION_GAS] = gas_prop * \
                     combustable_fuels_prop * self.total_fuel
 
         # The 'direct_ab' value should be changed to the value the user wants.
         # The user needs to convert the value into kg CO2e / Euro
         # 1.0475 # USER_INPUT
-        ab_m.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
+        emission_intensities.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
 
 
     def emission_calculation(self,
-        policy_year=None, # U10.1
-        pop_size_policy=None, # U10.2
-        new_floor_area=0, # U10.3
-        eff_gain=False,  # U11.1.0
-        eff_scaler=0,  # U11.1.1
-        local_electricity=False,  # U11.2.0
-        # U11.2.1  'Electricity by solar photovoltaic','Electricity by biomass and waste',
-        # 'Electricity by wind','Electricity by Geothermal'
-        el_type = 'Electricity by solar photovoltaic',
-        el_scaler = 0,  # U11.2.2
-        s_heating = False,  # U11.3.0
-        biofuel_takeup = False,  # U12.1.0
-        bio_scaler = 0,  # U12.1.1
-        ev_takeup = False,  # U12.2.0
-        ev_scaler = 0,  # U12.2.1
-        modal_shift = False,  # U12.3.0
-        ms_fuel_scaler = 0,  # U12.3.1
-        ms_veh_scaler = 0,  # U12.3.2
-        ms_pt_scaler = 0,  # U12.3.3
+        policy_year=None, # U10.1 - the year the policy is implemented
+        pop_size_policy=None, # U10.2 - new total number of people
+        new_floor_area=0, # U10.3 - gross SQM
+        # U11.1 - Household energy efficiency
+        eff_gain=False,  # U11.1.0 - consider household energy efficiency?
+        eff_scaler=0,  # U11.1.1 - percentage energy reduced
+        # U11.2 - Local electricity
+        local_electricity=False,  # U11.2.0 - consider local electricity?
+        el_type='Electricity by solar photovoltaic', # U11.2.1 - source/type
+            # can be:  'Electricity by solar photovoltaic','Electricity by biomass and waste',
+            # 'Electricity by wind','Electricity by Geothermal'
+        el_scaler=0,  # U11.2.2 - percentage of coverage
+        # U11.3 - Changes in the heating share
+        s_heating=False, # U11.3.0 - Consider changes in the heating share?
+        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
+        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+        district_prop=0, # U11.3.1 - breakdown of heating sources 0 -> default
+        solids_prop = 0.0, # U11.3.2a - TODO: no idea
+        liquids_prop = 0.0, # U11.3.2b - TODO: no idea
+        gases_prop = 0.0, # U11.3.2c - TODO: no idea
+        district_value=0, # U11.3.3 - percentage - direct emissions from district heating
+            # when 0, then district_value=
+            #   emission_intensities.loc[direct_ab, DISTRICT_SERVICE_LABEL].sum()
+        # U12.1 - biofuel in transport
+        biofuel_takeup=False,  # U12.1.0 - Consider biofuel in transport?
+        bio_scaler=0,  # U12.1.1 - percentage of transport fuels covered by biofuels
+        # U12.2 - Introduction of electric vehicles
+        ev_takeup=False,  # U12.2.0 - Consider introduction of electric vehicles?
+        ev_scaler=0,  # U12.2.1 - percentage of private vehicles that are electric
+        # U12.3 - Transport modal shift
+        modal_shift=False,  # U12.3.0 - Consider transport modal shift?
+        ms_fuel_scaler=0,  # U12.3.1 - percentage of private vehicle use reduction
+        ms_veh_scaler=0,  # U12.3.2 - percentage of private vehicle ownership reduction
+        ms_pt_scaler=0,  # U12.3.3 - percentage of public transport use increase
         ):
         """
-        This function can compute both a baseline, but also a six policies on an
+        This function can compute both a baseline, but also aix policies on an
         initialized consumption object.
         """
 
+        # percentage adjustments
+        eff_scaler /= 100
+        self.eff_scaler = eff_scaler
+        el_scaler /= 100
+        self.el_scaler = el_scaler
+        district_prop /= 100
+        self.district_prop = district_prop
+        solids_prop /= 100
+        self.solids_prop = solids_prop
+        liquids_prop /= 100
+        self.liquids_prop = liquids_prop
+        gases_prop /= 100
+        self.gases_prop = gases_prop
+        bio_scaler /= 100
+        self.bio_scaler = bio_scaler
+        ev_scaler /= 100
+        self.ev_scaler = ev_scaler
+        ms_fuel_scaler /= 100
+        self.ms_fuel_scaler = ms_fuel_scaler
+        ms_pt_scaler /= 100
+        self.ms_pt_scaler = ms_pt_scaler
+        ms_veh_scaler /= 100
+        self.ms_veh_scaler = ms_veh_scaler
+
         if policy_year is None:
-            policy_year=self.year
+            policy_year = self.year
 
         if pop_size_policy is None:
             pop_size_policy = self.pop_size
@@ -816,17 +878,34 @@ class Consumption:
                 if local_electricity:
                     self.local_generation(self.emission_intensities, el_scaler, el_type)
 
-                # TODO: district_value is never set in input material - check with Peter
-                # district_value = ab_M.loc[direct_ab,district].sum() #copied from elsewhere
-                self.district_value=0 # or given?
                 if s_heating:
+                    if district_prop < DELTA_ZERO: # if this is close to zero
+                        district_prop = self.demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
+                        self.district_prop = district_prop
+                        demand_kv=self.demand_kv
+                        sum_all = (demand_kv[LIQUID_TYPES].sum() 
+                                + demand_kv[SOLID_TYPES].sum() 
+                                + demand_kv[GAS_TYPES].sum())
+                        liquids_prop = demand_kv[LIQUID_TYPES].sum() / sum_all 
+                    solids_prop = demand_kv[SOLID_TYPES].sum() / sum_all
+                    gases_prop = demand_kv[GAS_TYPES].sum() / sum_all
+                        # TODO: verify that these are the right defaults
+                    if district_value < DELTA_ZERO: # close to zero
+                        district_value = \
+                            self.emission_intensities \
+                                .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
+                        self.district_value = district_value
+                    else:
+                        self.district_value = district_value
                     self.local_heating(self.emission_intensities, self.district_prop,
                         self.electricity_heat_prop, self.combustable_fuels_prop,
                         self.liquids_prop, self.gases_prop, self.solids_prop,
-                        self.district_value) # TODO: check district_value is never set
+                        self.district_value)
 
                 ###########Biofuel_in_transport####################
                 if biofuel_takeup:
+                    if bio_scaler < DELTA_ZERO:
+                        bio_scaler = 50  # default for bio scaler
                     self.biofuels(bio_scaler)
 
                 ########Electric_Vehicles##########################################
@@ -837,7 +916,8 @@ class Consumption:
                 #########Modal_Shift####################################################
                 #########U12.3#################
                 if modal_shift:
-                    self.transport_modal_shift(ms_fuel_scaler, ms_pt_scaler, ms_veh_scaler)
+                    self.transport_modal_shift(
+                        ms_fuel_scaler, ms_pt_scaler, ms_veh_scaler)
 
             if year_it > 2020 and year_it <= 2030:
                 # Select the income multiplier for this decade
@@ -887,7 +967,7 @@ class Consumption:
             # print(year_it)
 
             #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
-            gwp_ab_pc = gwp_ab / (self.house_size_ab * house_mult)
+            gwp_ab_pc = gwp_ab / (self.house_size * house_mult)
 
             # Put the results into sectors
             df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
@@ -928,14 +1008,205 @@ class Consumption:
         result1 = df_main.copy()
         # locals()[region + "_Emissions_tot_" + policy_label] = DF_tot.copy()
 
-        result2 = df_area.copy()
+        # result2 = df_area.copy() - we only return total emissions
 
-        return (result1, result2)
+        return (result1, df_area['Total_Emissions'])
 
         ### end of emission calculation function ###
 
 
     ###################### end of policy methods/functions  ###################################
+
+    def output_results(self, policy_list):
+        """
+        output results - initially graphs, later json
+        """
+        # 1st graph
+            # First Graph is a breakdown of the Emissions as a stacked bar graph.
+        # Maybe best to just show this one by itself?
+
+        # Describe Emissions over time
+        # The construction Emissions are now shown here.
+        # I just added very quickly so please make better!
+
+        _, axis = plt.subplots(1, figsize=(15, 10))
+        # Name of country Emissions
+        country = self.country
+        #policy_label = "BL"
+
+        ###
+        #x = np.arange(list(range(2020,2050)))
+        # plot bars
+
+        labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
+        sectors = list(IW_SECTORS_T.columns)
+
+        df_main, df_total_area_emissions = policy_list[0]
+        bottom = len(df_main) * [0]
+        for idx, name in enumerate(sectors):
+            plt.bar(df_main.index, df_main[name], bottom=bottom)
+            bottom = bottom + df_main[name]
+
+        plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+
+        axis.set_title("Annual Household Emissions for %s" % country, fontsize=20)
+        axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+        axis.tick_params(axis="y", labelsize=15)
+        axis.set_xlabel('Year', fontsize=15)
+        axis.tick_params(axis="x", labelsize=15)
+
+        axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+
+        plt.show()  # first graph
+
+        # values in print -> return to frontend
+        print("Baseline emissions", df_main)
+        # print total emissions for years, TODO: discuss, maybe only the baseline year is intersting
+        print("Total area emissions", df_total_area_emissions)
+        if len(policy_list) > 1:
+            counter=1
+            for df_main, df_total_area_emissions in policy_list:
+                print("Policy %s emissions:"%counter, df_main)
+                print("Policy %s total area emissions"%counter, df_total_area_emissions)
+
+
+        ### second graph
+        # Clicking on a bar or looking at a comparison between policies should generate this
+        # second graph - for now we just use the policy year
+        # The labels below are just for different policies.
+
+        # There should also be an option to remove the total emissions part
+        # (This is basically only useful for new areas)
+
+        width = 0.2  # TODO: consider calculating this
+        x = np.arange(len(df_main.columns))
+
+        _, axis = plt.subplots(figsize=(15, 10))
+
+        counter=0
+        label_list = []
+        for df_main, _ in policy_list:
+            if counter == 0:
+                label = "BL"
+            else:
+                label = "P%s" % (counter)
+            label_list.append(label)
+            axis.bar(
+                x + counter * 1.5 * width, df_main.loc[self.policy_year], width, label=label)
+            counter += 1
+
+        # rects1 = axis.bar(
+        #     x + 0 * width, df_main.loc[2025], width, label='BL')
+        # # Extra policies
+        # rects2 = axis.bar(x - 1.5 * width,
+        #                 policy_main.loc[2025], width, label='P1')
+        # # Extra Policies
+        # rects3 = axis.bar(x + 1.5 * width,
+        #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
+        # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], 
+        # #                          width, label='NA')  # Extra Policies
+
+
+        #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5,  color='green')
+        #plt.bar(x_sectors, E_countries_GWP_sectors_pp['FI'], width = 0.5, color='blue', alpha = 0.5)
+        axis.legend_size = 20
+        axis.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
+        axis.set_xlabel('Emissions sector', fontsize=20)
+        axis.set_title(
+            'Per capita emissions by sector for County Meath policies', fontsize=25)
+        axis.set_xticks(x)
+        axis.set_xticklabels(df_main.columns, fontsize=15)
+        #ax.set_yticklabels( fontsize = 15)
+        axis.tick_params(axis="y", labelsize=15)
+        axis.legend(prop={'size': 15})
+
+
+        #x.label(rects1, padding=3)
+        #x.label(rects2, padding=3)
+
+        # lt.xlabel("Sectors")
+        #lt.ylabel("CO2 eq /  kG?")
+        #lt.title("Global Emissions by Sector")
+
+        plt.xticks(x, df_main.columns, rotation=90)
+
+        #plt.savefig("Sectoral_Graphs_breakdown.jpg",bbox_inches='tight', dpi=300)
+
+        plt.show() # second graph
+
+        ### third graph
+        # Finally, there should be some sort of cumulative emissions measurement.
+        # Ths is also important in the case of delaying policies
+
+        # This calculates the different cumulative emissions
+        # THIS is just all the policies I made
+        # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]
+        #    policy_labels = ["BL", "P1", "P2"]
+        #    policy_labels = ["BL", "P1"]
+        # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
+
+        if len(policy_list)>1: # only show when policy comparison possible
+            fig, axis = plt.subplots(1, figsize=(15, 10))
+            # Name of country Emissions
+            country = self.country
+
+            counter = 0
+            for df_main, _ in policy_list:
+                # Describe Emissions over time
+                policy_summed = pd.DataFrame(np.zeros((30, 1)),
+                                index=list(range(2020, 2050)), columns=["Summed_Emissions"])
+                policy_summed.loc[2020, "Summed_Emissions"] = df_main.loc[2020, 'Total_Emissions']
+
+                years = list(range(2020, 2050))
+                for year in years:
+                    policy_summed.loc[year+1, "Summed_Emissions"] = (
+                        policy_summed.loc[year, "Summed_Emissions"]
+                        + df_main.loc[year+1, 'Total_Emissions'])
+
+                # # print("The Emissions in 2025 for %s is" % policy,
+                # #   locals()[region + "_Emissions_" + policy].loc[2025,'Total_Emissions'])
+                # print("The Emissions in 2025 for %s is" % policy_abbr,
+                #     baseline_main.loc[2025, 'Total_Emissions'])
+
+
+                # Make the graph
+
+                dataframe = policy_summed.copy()
+                ###
+                #x = np.arange(list(range(2020,2050)))
+                # plot bars
+
+                #Labels = ['HE','HO','TF','TO','AT','F','TG','S']
+                sectors = list(IW_SECTORS_T.columns)
+
+                #bottom = len(DF) * [0]
+                # for idx, name in enumerate(sectors):
+                #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
+                #  bottom = bottom + self.df_main[name]
+
+                plt.plot(dataframe.index, dataframe.Summed_Emissions, )
+
+                plt.fill_between(dataframe.index, dataframe.Summed_Emissions, alpha=0.4)  # +counter)
+
+                counter += 0.1
+
+            #x = np.arange(len(Ireland_Emissions.index))
+            #width = 0.8
+
+            #ax.bar(x, Ireland_Emissions['Housing_Energy'], width, label=abbrev)
+
+            axis.set_title("Aggregated per capita Emissions for %s 2020-2050" %
+                        country, fontsize=20)
+            axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+            axis.tick_params(axis="y", labelsize=15)
+            axis.set_xlabel('Year', fontsize=15)
+            axis.tick_params(axis="x", labelsize=15)
+
+            axis.legend(label_list, loc='upper left', ncol=2, prop={'size': 15})
+
+            #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
+
+            plt.show()
 
 
 # Construction Emissions new part.
@@ -951,16 +1222,16 @@ class Consumption:
 # The calculations work by describing the economy as being
 # composed of 200 products, given by 'products'.
 # For each product there is an emission intensity and they are collected
-# together in ab_M.
+# together in emission_intensities.
 # There are separate emission intensities for the 'direct production'
 # and the 'indirect production' (rest of the supply chain).
-# So ab_M is a 200 x 2 table.
+# So emission_intensities is a 200 x 2 table.
 # Some products that describe household fuel use for heat and
 # also transport fuel use for cars have another emission
 # intensity as well. These are held in separate tables
 # 'use_phase' and 'tail_pipe' (all other products have 0 here)
 
-# To calculate the emissions, each value in ab_M + the values in use_phase
+# To calculate the emissions, each value in emission_intensities + the values in use_phase
 # and tail_pipe are multiplied by the amount the household spends
 # on each of the 200 products. These are stored in another table
 # called demand_kv (demand vector).
@@ -975,7 +1246,7 @@ class Consumption:
 # tangible goods, and services
 
 # The calculations are performed every year until 2050,
-# with the values of demand_kv and ab_M changing slighting each year.
+# with the values of demand_kv and emission_intensities changing slighting each year.
 # This is based on 3 factors, efficiency improvements,
 # changes in income and changes in household size. There is also a
 # section where these projections can change as a result
@@ -984,238 +1255,61 @@ class Consumption:
 ###################################################################################
 # Determine Emissions for all years
 
-######## Included in the start screen ##############################
 
 def testcase_peter_planner():
     """
-    Just a test case corresponding to the story
+    Just a test case corresponding to the story.
+    TODO: Several parts of the story are still missing.
     """
     calculation = Consumption(
-        year=2022, # required
+        year=2023, # required
         country="Ireland", # required
         pop_size=195000, # required
         region="County_Meath", # optional (else undefined)
-        # area_type = "average",  # U9.4: average*, town, city, rural
-        # eff_scaler = "normal", # U9.5: fast, normal*, slow
+        #area_type="average",  # U9.4: average*, town, city, rural
+        #house_size=0, # U9.3: if 0, picks default
+        #income_choice=0, # 0 or 3 means average (3rd_household, 40-60%)
+        #eff_scaler_initial = "normal", # U9.5: fast, normal*, slow - * is default
         )
 
-    # baseline
-    baseline_main, baseline_area = calculation.emission_calculation()
+    # baseline computation
+    baseline_main, baseline_total_area_emissions = calculation.emission_calculation()
 
+    calculation.output_results([(baseline_main, baseline_total_area_emissions)])
 
-    policy_main, policy_area  = calculation.emission_calculation(
-        policy_year=2025,
-        pop_size_policy=205000,
-        new_floor_area=0, # U10.3
-        el_type = 'Electricity by solar photovoltaic', # U11.2.1
-        el_scaler = 0.5,  # U11.2.2
-        # s_heating = False,  # U11.3.0
-        # # the following are already defined
-        # # district_prop = 0.25 #USER_INPUT  U11.3.1
-        # # electricity_heat_prop = 0.75 #USER_INPUT
-        # # combustable_fuels_prop = 0.25 #USER_INPUT
-
-        # # solids_prop = 0.0 #USER_INPUT   U11.3.2
-        # # gases_prop = 0.0 #USER_INPUT
-        # # liquids_prop = 0.0 #USER_INPUT
-        # # District_value = ab_M.loc[direct_ab,district].sum() # ab_M   0.0 # USER_INPUT  U11.3.3
-        # biofuel_takeup = False,  # U12.1.0
-        # bio_scaler = 0.5,  # 12.1.1
-        # ev_takeup = False, # U12.2.0
-        # ev_scaler = 0.5,  # U12.2.1
-        # modal_shift = False,  # U12.3.0
-        # ms_fuel_scaler = 0.5,  # U12.3.1
-        # ms_veh_scaler = 0.5,  # U12.3.2
-        # ms_pt_scaler = 0.2,  # U12.3.3
+    # policy application and computation
+    policy_main, policy_total_area_emissions  = calculation.emission_calculation(
+        policy_year=2025,  # U10.1 - the year the policy is implemented
+        pop_size_policy=205000,  # U10.2 - new total number of people
+        new_floor_area=50000,  # U10.3 - gross SQM
+        # U11.1 - Household energy efficiency
+        eff_gain=True,  # U11.1 - consider “Household energy efficiency”?
+        eff_scaler=10,  # U11.1.1 - percentage energy reduced
+        # U11.2 - Local electricity
+        local_electricity=True,  # U11.2.0 - consider local electricity
+        el_type='Electricity by solar photovoltaic', # U11.2.1 - source/type
+        el_scaler=5,  # U11.2.2 - percentage of coverage
+        s_heating=True,  # U11.3.0 - heating share?
+        district_prop=0,  # U11.3.1 - breakdown of heating sources 0 -> default
+        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
+        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+        # solids_prop = 0.0 # U11.3.2a - TODO: no idea
+        # liquids_prop = 0.0 # U11.3.2b - TODO: no idea
+        # gases_prop = 0.0 # U11.3.2c - TODO: no idea
+        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum() 
+            # - emission_intensities   0.0 #  U11.3.3
+        district_value=0, # U11.3.3 - percentage - direct emissions from district heating
+        biofuel_takeup=True,  # U12.1.0- Consider biofuel in transport?
+        bio_scaler=0,  # 12.1.1 - percentage of transport fuels covered by biofuels
+        ev_takeup=True, # U12.2.0 - change to electric vehicles
+        ev_scaler=0,  # U12.2.1 - percentage of private vehicles that are electric
+        modal_shift = True,  # U12.3.0 - Consider transport modal shift?
+        ms_fuel_scaler = 4,  # U12.3.1 - percentage of private vehicle use reduction
+        ms_veh_scaler = 4,  # U12.3.2 - percentage of private vehicle ownership reduction
+        ms_pt_scaler = 4,  # U12.3.3 - percentage of public transport use increase
         )
-
-    ### Graphs are from here
-
-    # First Graph is a breakdown of the Emissions as a stacked bar graph.
-    # Maybe best to just show this one by itself?
-
-    # Describe Emissions over time
-    # The construction Emissions are now shown here.
-    # I just added very quickly so please make better!
-
-    fig, axis = plt.subplots(1, figsize=(15, 10))
-    # Name of country Emissions
-    country = "County_Meath"
-    #policy_label = "BL"
-
-    ###
-    #x = np.arange(list(range(2020,2050)))
-    # plot bars
-
-    labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
-    sectors = list(IW_SECTORS_T.columns)
-
-    bottom = len(baseline_main) * [0]
-    for idx, name in enumerate(sectors):
-        plt.bar(baseline_main.index, baseline_main[name], bottom=bottom)
-        bottom = bottom + baseline_main[name]
-
-    plt.bar(baseline_main.index, baseline_main['Total_Emissions'], edgecolor='black', color='none')
-
-    axis.set_title("Annual Household Emissions for %s" % country, fontsize=20)
-    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
-    axis.tick_params(axis="y", labelsize=15)
-    axis.set_xlabel('Year', fontsize=15)
-    axis.tick_params(axis="x", labelsize=15)
-
-    axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
-
-
-    plt.show()
-
-
-    # Clicking on a bar or looking at a comparison between policies should generate this second graph
-    # The labels below are just for different policies.
-
-    # There should also be an option to remove the total emissions part
-    # (This is basically only useful for new areas)
-
-
-    # more graphs
-
-    width = 0.2
-    x = np.arange(len(baseline_main.columns))
-
-    fig, axis = plt.subplots(figsize=(15, 10))
-
-    rects1 = axis.bar(
-        x + 0 * width, baseline_main.loc[2025], width, label='BL')
-    # Extra policies
-    rects2 = axis.bar(x - 1.5 * width,
-                    policy_main.loc[2025], width, label='P1')
-    # # Extra Policies
-    # rects3 = axis.bar(x + 1.5 * width,
-    #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
-    # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], 
-    # #                          width, label='NA')  # Extra Policies
-
-
-    #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5,  color='green')
-    #plt.bar(x_sectors, E_countries_GWP_sectors_pp['FI'], width = 0.5, color='blue', alpha = 0.5)
-    axis.legend_size = 20
-    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
-    axis.set_xlabel('Emissions sector', fontsize=20)
-    axis.set_title(
-        'Per capita emissions by sector for County Meath policies', fontsize=25)
-    axis.set_xticks(x)
-    axis.set_xticklabels(baseline_main.columns, fontsize=15)
-    #ax.set_yticklabels( fontsize = 15)
-    axis.tick_params(axis="y", labelsize=15)
-    axis.legend(prop={'size': 15})
-
-
-    #x.label(rects1, padding=3)
-    #x.label(rects2, padding=3)
-
-    # lt.xlabel("Sectors")
-    #lt.ylabel("CO2 eq /  kG?")
-    #lt.title("Global Emissions by Sector")
-
-    plt.xticks(x, baseline_main.columns, rotation=90)
-
-    #plt.savefig("Sectoral_Graphs_breakdown.jpg",bbox_inches='tight', dpi=300)
-
-
-    plt.show()
-
-    # Finally, there should be some sort of cumulative emissions measurement.
-    # Ths is also important in the case of delaying policies
-
-    # This calculates the different cumulative emissions
-    # THIS is just all the policies I made
-    # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]
-    #    policy_labels = ["BL", "P1", "P2"]
-    #    policy_labels = ["BL", "P1"]
-    # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
-
-    fig, axis = plt.subplots(1, figsize=(15, 10))
-    # Name of country Emissions
-    country = "County_Meath"
-    region = "County_Meath"
-    # Policy_labels = ["BL","EVx50", "MSx50", "SHx50", "NA"]
-    #policy_labels = ["BL", "P1", "P2"]
-
-    policy_frames = [(baseline_main, "BL"), (policy_main, "P1")]
-    counter = 0
-    for policy, policy_abbr in policy_frames:
-        # Describe Emissions over time
-        # TODO: no idea what is going here - need to verify my translation
-        # locals()[region + "_summed_" + policy] = 
-        #   pd.DataFrame(np.zeros((30,1)),index = list(range(2020,2050)),
-        #       columns = ["Summed_Emissions"])
-        policy_summed = pd.DataFrame(np.zeros((30, 1)),
-                        index=list(range(2020, 2050)), columns=["Summed_Emissions"])
-
-        # locals()[region + "_summed_" + policy].loc[2020, "Summed_Emissions"] =
-        #      locals()[region + "_Emissions_" + policy].loc[2020,'Total_Emissions']
-        policy_summed.loc[2020, "Summed_Emissions"] = policy.loc[2020, 'Total_Emissions']
-
-        # years = list(range(2020,2050))
-        years = list(range(2020, 2050))
-
-        # for year in years:
-        #     locals()[region + "_summed_" + policy].loc[year+1,"Summed_Emissions"] =
-        #       locals()[region + "_summed_" + policy].loc[year,"Summed_Emissions"]
-        #       + locals()[region + "_Emissions_" + policy].loc[year+1,'Total_Emissions']
-        for year in years:
-            policy_summed.loc[year+1, "Summed_Emissions"] = (
-                policy_summed.loc[year, "Summed_Emissions"]
-                + baseline_main.loc[year+1, 'Total_Emissions'])
-
-        # print("The Emissions in 2025 for %s is" % policy,
-        #   locals()[region + "_Emissions_" + policy].loc[2025,'Total_Emissions'])
-        print("The Emissions in 2025 for %s is" % policy_abbr,
-            baseline_main.loc[2025, 'Total_Emissions'])
-
-
-        # Make the graph
-
-        dataframe = policy_summed.copy()
-        ###
-        #x = np.arange(list(range(2020,2050)))
-        # plot bars
-
-        #Labels = ['HE','HO','TF','TO','AT','F','TG','S']
-        sectors = list(IW_SECTORS_T.columns)
-
-        #bottom = len(DF) * [0]
-        # for idx, name in enumerate(sectors):
-        #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
-        #  bottom = bottom + self.df_main[name]
-
-        plt.plot(dataframe.index, dataframe.Summed_Emissions, )
-
-        plt.fill_between(dataframe.index, dataframe.Summed_Emissions, alpha=0.4)  # +counter)
-
-        counter += 0.1
-
-    #x = np.arange(len(Ireland_Emissions.index))
-    #width = 0.8
-
-    #rects1 = ax.bar(x, Ireland_Emissions['Housing_Energy'], width, label=abbrev)
-
-    axis.set_title("Aggregated per capita Emissions for %s 2020-2050" %
-                country, fontsize=20)
-    axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
-    axis.tick_params(axis="y", labelsize=15)
-    axis.set_xlabel('Year', fontsize=15)
-    axis.tick_params(axis="x", labelsize=15)
-
-    axis.legend(["BL", "P1"], loc='upper left', ncol=2, prop={'size': 15})
-
-    #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
-
-
-    plt.show()
-
-    print("County_Meath_Emissions_baseline", baseline_main)
-
-    print("County_Meath_Emissions_policy", policy_main)
+    calculation.output_results([(baseline_main, baseline_total_area_emissions),
+        (policy_main, policy_total_area_emissions)])
 
 
 def main():
