@@ -52,9 +52,9 @@ HOUSE_SIZE_T = pd.read_csv(CSV_PATH + "Household_characteristics_2015.csv", inde
 # EMISSION_COUNTRIES_T is the standard Emissions factors
 EMISSION_COUNTRIES_T = pd.read_csv(CSV_PATH + "Country_Emissions_intensities.csv", index_col=0)
 
-# M_countries_LCA is the same as M_countries, but with the electricity sector replaced with 
+# M_countries_LCA is the same as M_countries, but with the electricity sector replaced with
 # individual LCA values
-# This is useful if there is local electricity production. The user can replace certain values 
+# This is useful if there is local electricity production. The user can replace certain values
 # with these values if needed
 EMISSION_COUNTRIES_LCA_T = pd.read_csv(
     CSV_PATH + "Country_Emissions_intensities_LCA.csv", index_col=0)
@@ -62,7 +62,7 @@ PRODUCT_COUNT = EMISSION_COUNTRIES_T.columns
 EXIO_PRODUCTS_T = pd.read_csv(CSV_PATH + "Exio_products.csv")
 
 # Load the IW sectors
-# This is needed to put the emissions into different 'sectors', such as transport, 
+# This is needed to put the emissions into different 'sectors', such as transport,
 # food, building energy use, etc
 IW_SECTORS_T = pd.read_csv(CSV_PATH + "IW_sectors_reduced.csv", index_col=0)
 IW_SECTORS_NP_T = IW_SECTORS_T.to_numpy()
@@ -74,9 +74,9 @@ IW_SECTORS_NP_TR_T = np.transpose(IW_SECTORS_NP_T)
 ADJUSTABLE_AMOUNTS_T = pd.read_csv(CSV_PATH + "Adjustable_energy_amounts.csv", index_col=0)
 
 # Electricity prices database might need updating still - TODO: we could think about that later
-# Load the electricity prices. This is so we know in monetary terms how much is being spent on 
+# Load the electricity prices. This is so we know in monetary terms how much is being spent on
 # electricity. The tool
-# at the moment has the electricity used by households in kWh. However, maybe this should now be 
+# at the moment has the electricity used by households in kWh. However, maybe this should now be
 # changed?
 ELECTRICITY_PRICES_T = pd.read_csv(CSV_PATH + "electricity_prices_2019.csv", index_col=0)
 
@@ -128,7 +128,7 @@ GAS_DIESEL_OIL = 'Gas/Diesel Oil'
 FUELS = [BIODIESEL, GAS_DIESEL_OIL, MOTORGASOLINE, BIOGASOLINE]
 
 MOTOR_VEHICLES = 'Motor vehicles, trailers and semi-trailers (34)'
-# the spelling mistake in accessories in the following LABEL is intended as that's how it is 
+# the spelling mistake in accessories in the following LABEL is intended as that's how it is
 # in the csv tables
 SALE_REPAIR_VEHICLES = ('Sale, maintenance, repair of motor vehicles, motor vehicles parts, '
     'motorcycles, motor cycles parts and accessoiries')
@@ -137,7 +137,7 @@ PUBLIC_TRANSPORT = [
     'Railway transportation services',
     'Other land transportation services',
     'Sea and coastal water transportation services',
-    'Inland water transportation services'] 
+    'Inland water transportation services']
 
 WOOD_PRODUCTS=('Wood and products of wood and cork (except furniture); '
     'articles of straw and plaiting materials (20)')
@@ -211,7 +211,8 @@ class Consumption:
     abbrev = str()      # This can be combined with the one above
 
     target_area = str()  # Required #3 options in dropdown menu
-    area_type = str()   # Required #4_options in drop down menu - average, rural, city, town (former U_type)
+    area_type = str()   # Required #4_options in drop down menu
+                        # - average, rural, city, town (former U_type)
     pop_size = int()  # Required - completely open
 
 
@@ -282,7 +283,7 @@ class Consumption:
 
     ## end of policy variables ##
 
-    def __init__(self, year, country, pop_size, 
+    def __init__(self, year, country, pop_size,
             region=None, # region is just a name for working on a specific subset of a country
             area_type="average",
             income_choice = "3rd_household",
@@ -296,7 +297,6 @@ class Consumption:
         self.region = region
         self.area_type = area_type
 
-        
         # initial demand vector
         self.demand_kv = Y_VECTORS[area_type][country].copy()
 
@@ -372,8 +372,8 @@ class Consumption:
 
         This sort of policy acts only on the Expenditure (Intensities don't change)
         Similar polices could exist for housing fuel types, ...
-        Similar adjustments to this could also be needed to correct the baselines if the user knows the
-        results to be different
+        Similar adjustments to this could also be needed to correct the baselines if
+        the user knows the results to be different
 
         Local Inputs:
         - demand_kv[BIOGASOLINE]
@@ -384,8 +384,10 @@ class Consumption:
         Outputs:
         - demand_kv[BIOGASOLINE] - careful, this means this field is permanently changed after call
         - demand_kv[BIODIESEL] - careful, this means this field is permanently changed after a call
-        - demand_kv[MOTORGASOLINE] - careful, this means this field is permanently changed after a call
-        - demand_kv[GAS_DIESEL_OIL] - careful, this means this field is permanently changed after a call
+        - demand_kv[MOTORGASOLINE] - careful, this means this field is permanently changed after
+                                        a call
+        - demand_kv[GAS_DIESEL_OIL] - careful, this means this field is permanently changed after
+                                        a call
         """
         demand_kv = self.demand_kv  # shortcut to work on this field
 
@@ -404,9 +406,11 @@ class Consumption:
         demand_kv[BIOGASOLINE] = scaler * total_fuel * (petrol / (diesel + petrol))
         demand_kv[BIODIESEL] = scaler * total_fuel * (diesel / (diesel + petrol))
 
-        # Step 3. Decrease the others by the correct amount, taking into account their initial values
+        # Step 3. Decrease the others by the correct amount,
+        # taking into account their initial values
         # The formula to do this is :
-        # New Value = Remaining_expenditure * Old_proportion (once the previous categories are removed)
+        # New Value = Remaining_expenditure * Old_proportion
+        # (once the previous categories are removed)
         # This can't be more than the total! - TODO: assert?
         sum_changed = demand_kv[BIOGASOLINE] + demand_kv[BIODIESEL]
 
@@ -430,13 +434,13 @@ class Consumption:
         First we reduce the expenditure on all forms of transport fuels by xx%
         Then, we need to add something onto the electricity
 
-        For this we need to: calculate how much fuel is saved and convert it back into Liters
+        For this we need to: calculate how much fuel is saved and convert it back into liters
         (and then kWh)
         Take into account the difference in efficiency between the two types
         Add the kWh evenly onto the electricity sectors
 
         Explanation/Description
-        This sort of policy acts only on the Expenditure 
+        This sort of policy acts only on the Expenditure
 
         Local Inputs:
         - demand_kv[BIODIESEL]
@@ -452,12 +456,13 @@ class Consumption:
         - ELECTRICITY_TYPES
 
         Outputs:
-        - demand_kv[electricity] - careful, this means this (these) field is permanently changed after a call to this method
-
+        - demand_kv[electricity] - careful, this means this (these) field is
+                                    permanently changed after a call to this method
         """
         demand_kv = self.demand_kv  # shortcut to work on this field
 
-        # Step 1 Assign a proportion of the fuels to be converted and reduce the fuels by the correct amount
+        # Step 1 Assign a proportion of the fuels to be converted and
+        # reduce the fuels by the correct amount
 
         diesel = (demand_kv[BIODIESEL] + demand_kv[GAS_DIESEL_OIL])*scaler
         petrol = (demand_kv[MOTORGASOLINE] + demand_kv[BIOGASOLINE])*scaler
@@ -466,8 +471,8 @@ class Consumption:
             demand_kv[fuel] = demand_kv[fuel]*(1-scaler)
 
         # Step 2 Turn the amount missing into kWh
-        diesel /= FUEL_PRICES_T.loc['Diesel_2020', country]
-        petrol /= FUEL_PRICES_T.loc['petrol_2020', country]
+        diesel /= FUEL_PRICES_T.loc['Diesel_2020', self.country]
+        petrol /= FUEL_PRICES_T.loc['petrol_2020', self.country]
 
         diesel *= 38.6*0.278   # liters, then kWh
         petrol *= 34.2*0.278   # liters, then kWh
@@ -532,11 +537,11 @@ class Consumption:
             demand_kv[gas] = (demand_kv[gas] * (1 - scaler))
 
         for elec in ELECTRICITY_TYPES:
-            elec_hold = demand_kv[elec] * (1 - (self.adjustable_amounts["elec_water"] 
+            elec_hold = demand_kv[elec] * (1 - (self.adjustable_amounts["elec_water"]
                 + self.adjustable_amounts["elec_heat"]
                 + self.adjustable_amounts["elec_cool"]))  # Parts not related to heating/cooling etc
             demand_kv[elec] = (demand_kv[elec] * (self.adjustable_amounts["elec_water"]
-                + self.adjustable_amounts["elec_heat"] 
+                + self.adjustable_amounts["elec_heat"]
                 + self.adjustable_amounts["elec_cool"]) * (1 - scaler))
             demand_kv[elec] += elec_hold
 
@@ -552,9 +557,11 @@ class Consumption:
         Modal share - decrease in private transport and increase in public transport
 
         This sort of policy acts only on the Expenditure (Intensities don't change)
-        The expenditure on private transport is reduced by a certain amount (1 part for fuels and 1 for vehicles)
+        The expenditure on private transport is reduced by a certain amount
+        (1 part for fuels and 1 for vehicles)
 
-        The public transport is also increased by a different amount. This is to account for the effects of active travel
+        The public transport is also increased by a different amount.
+        This is to account for the effects of active travel
 
         Global Inputs:
         - PUBLIC_TRANSPORT
@@ -566,14 +573,14 @@ class Consumption:
         - demand_kv[electricity] - seems to be a list of values (as later sum used)
         - demand_kv[MOTOR_VEHICLES]
         - demand_kv[SALE_REPAIR_VEHICLES]
-        - demand_kv <- for all public_transports 
+        - demand_kv <- for all public_transports
 
         Outputs:
         - demand_kv[MOTOR_VEHICLES] - careful, this means this field
           is permanently changed after a call to this method
-        - demand_kv[SALE_REPAIR_VEHICLES] - - careful, this means this field is 
+        - demand_kv[SALE_REPAIR_VEHICLES] - - careful, this means this field is
           permanently changed after a call to this method
-        - demand_kv <- for all public_transports - careful, this means this field is 
+        - demand_kv <- for all public_transports - careful, this means this field is
           permanently changed after a call to this method
         """
         demand_kv = self.demand_kv  # shortcut to work on this field
@@ -601,7 +608,7 @@ class Consumption:
 
         Reduce current electricity by xx %
         Introduce a new electricity emission intensity (based on PV in the LCA emission intensities)
-        that accounts for the missing xx %  
+        that accounts for the missing xx %
 
         Global Inputs:
         - direct_ab
@@ -615,8 +622,8 @@ class Consumption:
 
         Outputs:
         - ab_M.loc[direct_ab:indirect_ab,ELECTRICITY_NEC]
-        - demand_kv[ELECTRICITY_NEC] - careful, this means this field is permanently changed after a call to this method
-
+        - demand_kv[ELECTRICITY_NEC] - careful, this means this field is permanently
+                                        changed after a call to this method
         """
         demand_kv = self.demand_kv  # shortcut to work on this field
 
@@ -634,7 +641,8 @@ class Consumption:
 
 
     def local_heating(self, ab_m, district_prop, elec_heat_prop,
-                    combustable_fuels_prop, liquids_prop, gas_prop, solids_prop, district_val):
+                    combustable_fuels_prop, liquids_prop,
+                    gas_prop, solids_prop, district_val):
         """
         Is this a policy? It has a lot of nice input values.
 
@@ -725,7 +733,7 @@ class Consumption:
         # 1.0475 # USER_INPUT
         ab_m.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
 
-    # 
+
     def emission_calculation(self,
         policy_year=None, # U10.1
         pop_size_policy=None, # U10.2
@@ -745,7 +753,7 @@ class Consumption:
         modal_shift = False,  # U12.3.0
         ms_fuel_scaler = 0,  # U12.3.1
         ms_veh_scaler = 0,  # U12.3.2
-        ms_pt_scaler = 0,  # U12.3.3   
+        ms_pt_scaler = 0,  # U12.3.3
         ):
         """
         This function can compute both a baseline, but also a six policies on an
@@ -776,7 +784,7 @@ class Consumption:
         #                     columns=PRODUCT_COUNT)  # holds final data in products (200)
 
         df_area = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
-                            columns=IW_SECTORS_T.columns)  # Holds area emissions 
+                            columns=IW_SECTORS_T.columns)  # Holds area emissions
                                                         # (multiplies by pop_size)
 
 
@@ -891,9 +899,9 @@ class Consumption:
         df_area['Total_Emissions'] = df_area.sum(axis=1)
 
 
-        ###########################################################################################################
+        ###########################################################################################
         # New Construction Emissions part!
-        #################################################################################################################
+        ###########################################################################################
 
         if not is_baseline:
             building_emissions = 0
@@ -911,11 +919,11 @@ class Consumption:
             df_area.loc[policy_year, 'Total_Emissions'] += building_emissions * pop_size
 
 
-        ##############################################################################################################
+        ###########################################################################################
         # End of Construction Emissions part!
-        #############################################################################################################
+        ###########################################################################################
         # Adding total emissions by multiplying by population
-        
+
         # F_tot.columns = Exio_products
         result1 = df_main.copy()
         # locals()[region + "_Emissions_tot_" + policy_label] = DF_tot.copy()
@@ -932,7 +940,7 @@ class Consumption:
 
 # Construction Emissions new part.
 
-# This answers the question on the first policy page 
+# This answers the question on the first policy page
 # 2. Construction
 # 2.1 New planned residential buildings in total gross square meters, m2"
 
@@ -1023,15 +1031,17 @@ def testcase_peter_planner():
 
     ### Graphs are from here
 
-    # First Graph is a breakdown of the Emissions as a stacked bar graph. Maybe best to just show this one by itself?
+    # First Graph is a breakdown of the Emissions as a stacked bar graph.
+    # Maybe best to just show this one by itself?
 
     # Describe Emissions over time
-    # The construction Emissions are now shown here. I just added very quickly so please make better!
+    # The construction Emissions are now shown here.
+    # I just added very quickly so please make better!
 
     fig, axis = plt.subplots(1, figsize=(15, 10))
     # Name of country Emissions
     country = "County_Meath"
-    policy_label = "BL"
+    #policy_label = "BL"
 
     ###
     #x = np.arange(list(range(2020,2050)))
@@ -1062,7 +1072,7 @@ def testcase_peter_planner():
     # Clicking on a bar or looking at a comparison between policies should generate this second graph
     # The labels below are just for different policies.
 
-    # There should also be an option to remove the total emissions part 
+    # There should also be an option to remove the total emissions part
     # (This is basically only useful for new areas)
 
 
@@ -1081,7 +1091,8 @@ def testcase_peter_planner():
     # # Extra Policies
     # rects3 = axis.bar(x + 1.5 * width,
     #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
-    # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], width, label='NA')  # Extra Policies
+    # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025], 
+    # #                          width, label='NA')  # Extra Policies
 
 
     #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5,  color='green')
@@ -1112,46 +1123,59 @@ def testcase_peter_planner():
 
     plt.show()
 
-    # Finally, there should be some sort of cumulative emissions measurement. Ths is also important in the case of delaying policies
+    # Finally, there should be some sort of cumulative emissions measurement.
+    # Ths is also important in the case of delaying policies
 
     # This calculates the different cumulative emissions
-    # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]   #THIS is just all the policies I made
-#    policy_labels = ["BL", "P1", "P2"]
-    policy_labels = ["BL", "P1"]
+    # THIS is just all the policies I made
+    # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]
+    #    policy_labels = ["BL", "P1", "P2"]
+    #    policy_labels = ["BL", "P1"]
     # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
-    region = "County_Meath"
-    for policy in policy_labels:
-        # TODO: no idea what is going here - I hope Peter knows
-        locals()[region + "_summed_" + policy] = pd.DataFrame(np.zeros((30, 1)),
-                                                            index=list(range(2020, 2050)), columns=["Summed_Emissions"])
-
-        locals()[region + "_summed_" + policy].loc[2020, "Summed_Emissions"] = locals()[
-            region + "_Emissions_" + policy].loc[2020, 'Total_Emissions']
-        years = list(range(2020, 2050))
-        for year in years:
-            locals()[region + "_summed_" + policy].loc[year+1, "Summed_Emissions"] = locals()[region + "_summed_" +
-                                                                                            policy].loc[year, "Summed_Emissions"] + locals()[region + "_Emissions_" + policy].loc[year+1, 'Total_Emissions']
-
-        print("The Emissions in 2025 for %s is" % policy, locals()[
-            region + "_Emissions_" + policy].loc[2025, 'Total_Emissions'])
-
-
-    # Make the graph
-
-    # Describe Emissions over time
-
 
     fig, axis = plt.subplots(1, figsize=(15, 10))
     # Name of country Emissions
     country = "County_Meath"
+    region = "County_Meath"
     # Policy_labels = ["BL","EVx50", "MSx50", "SHx50", "NA"]
-    policy_labels = ["BL", "P1", "P2"]
+    #policy_labels = ["BL", "P1", "P2"]
 
-
+    policy_frames = [(baseline_main, "BL"), (policy_main, "P1")]
     counter = 0
-    for policy in policy_labels:
-        dataframe = locals()[country + "_summed_" + policy].copy()
+    for policy, policy_abbr in policy_frames:
+        # Describe Emissions over time
+        # TODO: no idea what is going here - need to verify my translation
+        # locals()[region + "_summed_" + policy] = 
+        #   pd.DataFrame(np.zeros((30,1)),index = list(range(2020,2050)),
+        #       columns = ["Summed_Emissions"])
+        policy_summed = pd.DataFrame(np.zeros((30, 1)),
+                        index=list(range(2020, 2050)), columns=["Summed_Emissions"])
 
+        # locals()[region + "_summed_" + policy].loc[2020, "Summed_Emissions"] =
+        #      locals()[region + "_Emissions_" + policy].loc[2020,'Total_Emissions']
+        policy_summed.loc[2020, "Summed_Emissions"] = policy.loc[2020, 'Total_Emissions']
+
+        # years = list(range(2020,2050))
+        years = list(range(2020, 2050))
+
+        # for year in years:
+        #     locals()[region + "_summed_" + policy].loc[year+1,"Summed_Emissions"] =
+        #       locals()[region + "_summed_" + policy].loc[year,"Summed_Emissions"]
+        #       + locals()[region + "_Emissions_" + policy].loc[year+1,'Total_Emissions']
+        for year in years:
+            policy_summed.loc[year+1, "Summed_Emissions"] = (
+                policy_summed.loc[year, "Summed_Emissions"]
+                + baseline_main.loc[year+1, 'Total_Emissions'])
+
+        # print("The Emissions in 2025 for %s is" % policy,
+        #   locals()[region + "_Emissions_" + policy].loc[2025,'Total_Emissions'])
+        print("The Emissions in 2025 for %s is" % policy_abbr,
+            baseline_main.loc[2025, 'Total_Emissions'])
+
+
+        # Make the graph
+
+        dataframe = policy_summed.copy()
         ###
         #x = np.arange(list(range(2020,2050)))
         # plot bars
@@ -1182,7 +1206,7 @@ def testcase_peter_planner():
     axis.set_xlabel('Year', fontsize=15)
     axis.tick_params(axis="x", labelsize=15)
 
-    axis.legend(policy_labels, loc='upper left', ncol=2, prop={'size': 15})
+    axis.legend(["BL", "P1"], loc='upper left', ncol=2, prop={'size': 15})
 
     #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
@@ -1195,6 +1219,9 @@ def testcase_peter_planner():
 
 
 def main():
+    """
+    Simple main that can run a test.
+    """
     testcase_peter_planner()
 
 if __name__ == "__main__":
