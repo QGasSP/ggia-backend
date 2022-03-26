@@ -13,6 +13,40 @@
 # - _KV or _kv: key-value
 # - _loc: Local representation of a former global variable
 
+########### Explanation #######################
+# The calculations work by describing the economy as being
+# composed of 200 products, given by 'products'.
+# For each product there is an emission intensity and they are collected
+# together in emission_intensities.
+# There are separate emission intensities for the 'direct production'
+# and the 'indirect production' (rest of the supply chain).
+# So emission_intensities is a 200 x 2 table.
+# Some products that describe household fuel use for heat and
+# also transport fuel use for cars have another emission
+# intensity as well. These are held in separate tables
+# 'use_phase' and 'tail_pipe' (all other products have 0 here)
+
+# To calculate the emissions, each value in emission_intensities + the values in use_phase
+# and tail_pipe are multiplied by the amount the household spends
+# on each of the 200 products. These are stored in another table
+# called demand_kv (demand vector).
+# The emissions for each product from the direct production,
+# indirect production, and use_phase/tail_pipe are summed
+# to get the total emissions for that product.
+
+# Once we have the total emissions for each product for that year,
+# they are grouped together into 'sectors' that describe different things.
+# There are 7 in total:
+# Household Energy, Household Other, transport fuels, transport other, air transport, food,
+# tangible goods, and services
+
+# The calculations are performed every year until 2050,
+# with the values of demand_kv and emission_intensities changing slighting each year.
+# This is based on 3 factors, efficiency improvements,
+# changes in income and changes in household size. There is also a
+# section where these projections can change as a result
+# of different policies (for the baseline no policies are introduced)
+
 
 # Loading Python Libraries
 import os
@@ -775,9 +809,9 @@ class Consumption:
         # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
         # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
         district_prop=0, # U11.3.1 - breakdown of heating sources 0 -> default
-        solids_prop = 0.0, # U11.3.2a - TODO: no idea
-        liquids_prop = 0.0, # U11.3.2b - TODO: no idea
-        gases_prop = 0.0, # U11.3.2c - TODO: no idea
+        solids_prop=0.0, # U11.3.2a - TODO: no idea
+        liquids_prop=0.0, # U11.3.2b - TODO: no idea
+        gases_prop=0.0, # U11.3.2c - TODO: no idea
         district_value=0, # U11.3.3 - percentage - direct emissions from district heating
             # when 0, then district_value=
             #   emission_intensities.loc[direct_ab, DISTRICT_SERVICE_LABEL].sum()
@@ -878,18 +912,18 @@ class Consumption:
             #     house_mult = 1  # This is just for the year 2020
             #     eff_factor = 1  # This is just for the year 2020
 
-            ###########Policies are from here#####################################
+            ########### Policies are from here #####################################
             if not is_baseline and year_it == policy_year:
 
                 #demand_kv = demand_kv_policy
-                # house_size_ab = house_size_ab_policy  #Because we are not asking these questions
+                # house_size_ab = house_size_ab_policy  # Because we are not asking these questions
                 pop_size = pop_size_policy
 
-                ##############Household Efficiency################################
+                ############## Household Efficiency ################################
                 if eff_gain:
                     self.eff_improvements(eff_scaler)
 
-                ##############Local_Electricity###################################
+                ############## Local_Electricity ###################################
                 ####################### U11.2 ######################################
                 if local_electricity:
                     self.local_generation(self.emission_intensities, el_scaler, el_type)
@@ -903,15 +937,15 @@ class Consumption:
                 ########### Biofuel_in_transport ####################
                 if biofuel_takeup:
                     if bio_scaler < DELTA_ZERO:
-                        bio_scaler = 50  # default for bio scaler
+                        bio_scaler = 0.5  # default for bio scaler
                     self.biofuels(bio_scaler)
 
-                ######## Electric_Vehicles ##########################################
+                ######## Electric_Vehicles ##########################
                 ###### U12.2 #############
                 if ev_takeup:
                     self.electric_vehicles(ev_scaler)
 
-                ######### Modal_Shift ####################################################
+                ######### Modal_Shift ############
                 ######### U12.3 #################
                 if modal_shift:
                     self.transport_modal_shift(
@@ -971,7 +1005,8 @@ class Consumption:
             df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
             # self.df_tot.loc[year_it] = gwp_ab_pc.sum()
             df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
-                gwp_ab_pc.sum().to_numpy()) * self.pop_size # TODO: check which pop_size should be used here? base or policy
+                gwp_ab_pc.sum().to_numpy()) * self.pop_size
+                # TODO: check which pop_size should be used here? base or policy
 
         df_main['Total_Emissions'] = df_main.sum(axis=1)
         df_area['Total_Emissions'] = df_area.sum(axis=1)
@@ -1019,13 +1054,11 @@ class Consumption:
         """
         output results - initially graphs, later json
         """
-        # 1st graph
-            # First Graph is a breakdown of the Emissions as a stacked bar graph.
+        # First Graph is a breakdown of the Emissions as a stacked bar graph.
         # Maybe best to just show this one by itself?
 
         # Describe Emissions over time
         # The construction Emissions are now shown here.
-        # I just added very quickly so please make better!
 
         _, axis = plt.subplots(1, figsize=(15, 10))
 
@@ -1051,23 +1084,31 @@ class Consumption:
         plt.show()  # first graph
 
         # values in print -> return to frontend
-        print("Baseline emissions", df_main)
-        # print total emissions for years, TODO: discuss, maybe only the baseline year is intersting
-        print("Total area emissions", df_total_area_emissions)
+        print("Baseline emissions: =========")
+        print(df_main)
+        print()
+        # print total emissions for years, TODO: discuss, maybe only baseline year is interesting
+        print("Baseline total area emissions: =========")
+        print(df_total_area_emissions)
+        print()
         if len(policy_list) > 1:
             counter=1
             for df_main, df_total_area_emissions in policy_list:
-                print(f"Policy {counter} emissions:", df_main)
-                print(f"Policy {counter} total area emissions:", df_total_area_emissions)
+                print(f"Policy {counter} emissions: =========")
+                print(df_main)
+                print()
+                print(f"Policy {counter} total area emissions: =========")
+                print(df_total_area_emissions)
+                print()
 
 
         ### second graph
         # Clicking on a bar or looking at a comparison between policies should generate this
-        # second graph - for now we just use the policy year
+        # second graph - for now we just use the policy year.
         # The labels below are just for different policies.
 
-        # There should also be an option to remove the total emissions part
-        # (This is basically only useful for new areas)
+        # There should also be an option to remove the total emissions part.
+        # (This is basically only useful for new areas.)
 
         width = 0.2  # TODO: consider calculating this
         spaced = np.arange(len(df_main.columns))
@@ -1157,15 +1198,9 @@ class Consumption:
                 # print("The Emissions in 2025 for %s is" % policy_abbr,
                 #     baseline_main.loc[2025, 'Total_Emissions'])
 
-
                 # Make the graph
-
                 dataframe = policy_summed.copy()
-                ###
-                #x = np.arange(list(range(2020,2050)))
-                # plot bars
 
-                #Labels = ['HE','HO','TF','TO','AT','F','TG','S']
                 sectors = list(IW_SECTORS_T.columns)
 
                 #bottom = len(DF) * [0]
@@ -1196,51 +1231,6 @@ class Consumption:
             #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
             plt.show()
-
-
-# Construction Emissions new part.
-
-# This answers the question on the first policy page
-# 2. Construction
-# 2.1 New planned residential buildings in total gross square meters, m2"
-
-# Baseline calculation here (policies is essentially the same calculation)
-########### Explanation #######################
-# The calculations work by describing the economy as being
-# composed of 200 products, given by 'products'.
-# For each product there is an emission intensity and they are collected
-# together in emission_intensities.
-# There are separate emission intensities for the 'direct production'
-# and the 'indirect production' (rest of the supply chain).
-# So emission_intensities is a 200 x 2 table.
-# Some products that describe household fuel use for heat and
-# also transport fuel use for cars have another emission
-# intensity as well. These are held in separate tables
-# 'use_phase' and 'tail_pipe' (all other products have 0 here)
-
-# To calculate the emissions, each value in emission_intensities + the values in use_phase
-# and tail_pipe are multiplied by the amount the household spends
-# on each of the 200 products. These are stored in another table
-# called demand_kv (demand vector).
-# The emissions for each product from the direct production,
-# indirect production, and use_phase/tail_pipe are summed
-# to get the total emissions for that product.
-
-# Once we have the total emissions for each product for that year,
-# they are grouped together into 'sectors' that describe different things.
-# There are 7 in total:
-# Household Energy, Household Other, transport fuels, transport other, air transport, food,
-# tangible goods, and services
-
-# The calculations are performed every year until 2050,
-# with the values of demand_kv and emission_intensities changing slighting each year.
-# This is based on 3 factors, efficiency improvements,
-# changes in income and changes in household size. There is also a
-# section where these projections can change as a result
-# of different policies (for the baseline no policies are introduced)
-
-###################################################################################
-# Determine Emissions for all years
 
 
 def testcase_peter_planner():
@@ -1305,6 +1295,7 @@ def main():
     Simple main that can run a test.
     """
     testcase_peter_planner()
+
 
 if __name__ == "__main__":
     main()
