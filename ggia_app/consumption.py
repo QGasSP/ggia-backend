@@ -53,16 +53,16 @@ import pandas as pd
 import numpy as np
 from flask import Blueprint
 from flask import request
+import humps
 from marshmallow import ValidationError
 from ggia_app.transport_schemas import *
 from ggia_app.models import *
 from ggia_app.env import *
-import humps
 PLOTTING=False
 if PLOTTING:
     import matplotlib.pyplot as plt
 
-blue_print = Blueprint("land-use-change", __name__, url_prefix="/api/v1/calculate/consumption")
+blue_print = Blueprint("consumption", __name__, url_prefix="/api/v1/calculate/consumption")
 
 
 ## constants (mainly strings and labels) and csv tables
@@ -259,6 +259,8 @@ class Consumption:
 
     ## Baseline variables ##
 
+    is_baseline = True # as long as no policy applied, it's the baseline variable
+
     year = int(2022)   # required
     region = str()   # required - Equivalent to "name the project"
     # I ask this to differentiate between policies, but maybe the tool has another way.
@@ -359,7 +361,7 @@ class Consumption:
         self.country = country
         self.abbrev = COUNTRY_ABBREVIATIONS[country]
         self.pop_size = pop_size
-        self.region = region
+        self.region = region  # TODO: region might have to be country if None
         self.area_type = area_type
 
         # initial demand vector
@@ -367,7 +369,7 @@ class Consumption:
 
         # U9.3: House_size
         # example: self.house_size = 2.14
-        if house_size < 0.01:
+        if house_size < DELTA_ZERO:
             # Pick default
             self.house_size = HOUSE_SIZE_T.loc['Average_size_' + area_type, country]
         else:
@@ -873,7 +875,7 @@ class Consumption:
             pop_size_policy = self.pop_size
 
         # if anything will be modified, this is not a baseline - TODO: check with Peter
-        is_baseline = not (eff_gain or local_electricity or s_heating or ev_takeup or modal_shift)
+        self.is_baseline = not (eff_gain or local_electricity or s_heating or ev_takeup or modal_shift)
 
         # Scale factor applied to income - unique value for each decade
         income_scaling = INCOME_PROJ_T.loc[self.country]
@@ -923,7 +925,7 @@ class Consumption:
             #     eff_factor = 1  # This is just for the year 2020
 
             ########### Policies are from here #####################################
-            if not is_baseline and year_it == policy_year:
+            if not self.is_baseline and year_it == policy_year:
 
                 #demand_kv = demand_kv_policy
                 # house_size_ab = house_size_ab_policy  # Because we are not asking these questions
@@ -1026,7 +1028,7 @@ class Consumption:
         # New Construction Emissions part!
         ###########################################################################################
 
-        if not is_baseline:
+        if not self.is_baseline:
             building_emissions = 0
 
             if self.country in NORTH:
@@ -1307,28 +1309,109 @@ def testcase_peter_planner():
 
 @blue_print.route("", methods=["GET", "POST"])
 def route_consumption():
+    """
+    Handle rest call.
+    """
     request_body = humps.decamelize(request.json)
 
-    # request objects
-    country = request_body["country"]
-    start_year = request_body["year"]
-    policy_start_years = request_body["policy_start_year"]
-    consumption_dict = request_body["consumption"]
+    ## Helper functions
+    def get(key, default=None):
+        return request_body.get(key, default)
+    def geti(key, default=0):
+        try:
+            value = int(request_body.get(key, default))
+        except (ValueError, KeyError):
+            value = default
+        return value
+    def getf(key, default=0.0):
+        try:
+            value = float(request_body.get(key, default))
+        except (ValueError, KeyError):
+            value = default
+        return value
+    def getb(key, default=False):
+        try:
+            value = request_body.get(key, default)
+            if type(value) is not bool:
+                value = str(value).lower()
+                value = not (value == "false" or valule == "0")
+        except (ValueError, KeyError):
+            value=default
+        return value
+ 
+    calculation = Consumption(
+        geti("year"), # required
+        get("country"), # required
+        geti("pop_size"), # required
+        region=get("region"), # optional (else undefined)
+        area_type=get("area_type", "average"),  # U9.4: average*, town, city, rural
+        house_size=getf("house_size", "0"), # U9.3: if 0, picks default
+        income_choice=geti("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
+        eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5: fast, normal*, slow - * is default
+        )
+
+    # baseline computation
+    baseline_main, baseline_total_area_emissions = calculation.emission_calculation()
+
+#    # print the results (and draw the graph)
+#    calculation.output_results([(baseline_main, baseline_total_area_emissions)])
+
+    sectors = list(IW_SECTORS_T.columns)
 
     consumption_response = dict()
+    bl_serial = dict()
+    for key in sectors:
+        bl_serial[key] = dict(baseline_main[key])
+    consumption_response["BL"] = bl_serial
+    consumption_response["BL_total_emissions"] = dict(baseline_total_area_emissions)
 
-    for year in range(start_year, start_year + 21):
-    # for year in range(start_year, 2051):
-        consumption_response[year] = calculate_consumption(country, consumption_dict, policy_start_years, year)
+    # policy application and computation
+    policy_main, policy_total_area_emissions  = calculation.emission_calculation(
+        policy_year=geti("policy_year", calculation.year),  # U10.1 - the year the policy is implemented
+        pop_size_policy=geti("pop_size_policy"),  # U10.2 - new total number of people
+        new_floor_area=geti("new_floor_area"),  # U10.3 - gross SQM
+        # U11.1 - Household energy efficiency
+        eff_gain=getb("eff_gain"), # U11.1 - consider “Household energy efficiency”?
+        eff_scaler=getf("eff_scaler"),  # U11.1.1 - percentage energy reduced
+        # U11.2 - Local electricity
+        local_electricity=getb("local_electricity"),  # U11.2.0 - consider local electricity
+        el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
+        el_scaler=getf("el_scaler"),  # U11.2.2 - percentage of coverage
+        s_heating=getb("s_heating"),  # U11.3.0 - heating share?
+        district_prop=getf("district_prop", 0),  # U11.3.1 - breakdown of heating sources 0->default
+        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
+        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+        solids_prop=getf("solids_prop"), # U11.3.2a - TODO: no idea
+        liquids_prop=getf("liquids_prop"), # U11.3.2b - TODO: no idea
+        gases_prop=getf("gases_prop"), # U11.3.2c - TODO: no idea
+        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
+            # - emission_intensities   0.0 #  U11.3.3
+        district_value=getf("district_value"),  # U11.3.3 - percentage 
+                                                # - direct emissions from district heating
+        biofuel_takeup=getb("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
+        bio_scaler=getf("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered by biofuels
+        ev_takeup=getb("ev_takeup"),  # U12.2.0 - change to electric vehicles
+        ev_scaler=getf("ev_scaler"),  # U12.2.1 - percentage of private vehicles that are electric
+        modal_shift=getb("modal_shift"),  # U12.3.0 - Consider transport modal shift?
+        ms_fuel_scaler=getf("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle reduction
+        ms_veh_scaler=getf("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle 
+                                              # ownership reduction
+        ms_pt_scaler=getf("ms_pt_scaler"),  # U12.3.3 - percentage of public transport use increase
+    )
 
-    for year in range(start_year + 21, 2051):
-        # pass
-        consumption_response[year] = calculate_consumption_21_to_30(country, consumption_dict, policy_start_years, year)
-          
+    if not calculation.is_baseline:
+        policy_serial = dict()
+        for key in sectors:
+            bl_serial[key] = dict(policy_main[key])
+        consumption_response["P1"] = bl_serial
+        consumption_response["P1_total_emissions"] = dict(policy_total_area_emissions)
+
+    print("consumption_response: ###",consumption_response)
     return humps.camelize({
         "status": "success",
         "data": {
-            "consumption": consumption_response}
+            "consumption": consumption_response
+        }
     })
 
     # Functionality to implement
