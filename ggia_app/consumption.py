@@ -47,12 +47,22 @@
 # section where these projections can change as a result
 # of different policies (for the baseline no policies are introduced)
 
-
 # Loading Python Libraries
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+from flask import Blueprint
+from flask import request
+from marshmallow import ValidationError
+from ggia_app.transport_schemas import *
+from ggia_app.models import *
+from ggia_app.env import *
+import humps
+PLOTTING=False
+if PLOTTING:
+    import matplotlib.pyplot as plt
+
+blue_print = Blueprint("land-use-change", __name__, url_prefix="/api/v1/calculate/consumption")
 
 
 ## constants (mainly strings and labels) and csv tables
@@ -1060,28 +1070,30 @@ class Consumption:
         # Describe Emissions over time
         # The construction Emissions are now shown here.
 
-        _, axis = plt.subplots(1, figsize=(15, 10))
-
-        labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
-        sectors = list(IW_SECTORS_T.columns)
-
         df_main, df_total_area_emissions = policy_list[0]
-        bottom = len(df_main) * [0]
-        for _, name in enumerate(sectors):
-            plt.bar(df_main.index, df_main[name], bottom=bottom)
-            bottom = bottom + df_main[name]
 
-        plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+        if PLOTTING:
+            _, axis = plt.subplots(1, figsize=(15, 10))
 
-        axis.set_title(f"Annual Household Emissions for {self.region}", fontsize=20)
-        axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
-        axis.tick_params(axis="y", labelsize=15)
-        axis.set_xlabel('Year', fontsize=15)
-        axis.tick_params(axis="x", labelsize=15)
+            labels = ['HE', 'HO', 'TF', 'TO', 'AT', 'F', 'TG', 'S']
+            sectors = list(IW_SECTORS_T.columns)
 
-        axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+            bottom = len(df_main) * [0]
+            for _, name in enumerate(sectors):
+                plt.bar(df_main.index, df_main[name], bottom=bottom)
+                bottom = bottom + df_main[name]
 
-        plt.show()  # first graph
+            plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+
+            axis.set_title(f"Annual Household Emissions for {self.region}", fontsize=20)
+            axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+            axis.tick_params(axis="y", labelsize=15)
+            axis.set_xlabel('Year', fontsize=15)
+            axis.tick_params(axis="x", labelsize=15)
+
+            axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+
+            plt.show()  # first graph
 
         # values in print -> return to frontend
         print("Baseline emissions: =========")
@@ -1101,136 +1113,139 @@ class Consumption:
                 print(df_total_area_emissions)
                 print()
 
+        if PLOTTING:
+            ### second graph
+            # Clicking on a bar or looking at a comparison between policies should generate this
+            # second graph - for now we just use the policy year.
+            # The labels below are just for different policies.
 
-        ### second graph
-        # Clicking on a bar or looking at a comparison between policies should generate this
-        # second graph - for now we just use the policy year.
-        # The labels below are just for different policies.
+            # There should also be an option to remove the total emissions part.
+            # (This is basically only useful for new areas.)
 
-        # There should also be an option to remove the total emissions part.
-        # (This is basically only useful for new areas.)
+            width = 0.2  # TODO: consider calculating this
+            spaced = np.arange(len(df_main.columns))
 
-        width = 0.2  # TODO: consider calculating this
-        spaced = np.arange(len(df_main.columns))
+            _, axis = plt.subplots(figsize=(15, 10))
 
-        _, axis = plt.subplots(figsize=(15, 10))
-
-        counter=0
-        label_list = []
-        for df_main, _ in policy_list:
-            if counter == 0:
-                label = "BL"
-            else:
-                label = f"P{counter}"
-            label_list.append(label)
-            axis.bar(
-                spaced + counter * 1.5 * width, df_main.loc[self.policy_year], width, label=label)
-            counter += 1
-
-        # rects1 = axis.bar(
-        #     x + 0 * width, df_main.loc[2025], width, label='BL')
-        # # Extra policies
-        # rects2 = axis.bar(x - 1.5 * width,
-        #                 policy_main.loc[2025], width, label='P1')
-        # # Extra Policies
-        # rects3 = axis.bar(x + 1.5 * width,
-        #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
-        # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025],
-        # #                          width, label='NA')  # Extra Policies
-
-
-        #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5, color='green')
-        #plt.bar(x_sectors, E_countries_GWP_sectors_pp['FI'], width = 0.5,
-        #   color='blue', alpha = 0.5)
-        axis.legend_size = 20
-        axis.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
-        axis.set_xlabel('Emissions sector', fontsize=20)
-        axis.set_title(
-            f'Per capita emissions by sector for {self.region} policies', fontsize=25)
-        axis.set_xticks(spaced)
-        axis.set_xticklabels(df_main.columns, fontsize=15)
-        #ax.set_yticklabels( fontsize = 15)
-        axis.tick_params(axis="y", labelsize=15)
-        axis.legend(prop={'size': 15})
-
-
-        #x.label(rects1, padding=3)
-        #x.label(rects2, padding=3)
-
-        # lt.xlabel("Sectors")
-        #lt.ylabel("CO2 eq /  kG?")
-        #lt.title("Global Emissions by Sector")
-
-        plt.xticks(spaced, df_main.columns, rotation=90)
-
-        #plt.savefig("Sectoral_Graphs_breakdown.jpg",bbox_inches='tight', dpi=300)
-
-        plt.show() # second graph
-
-        ### third graph
-        # Finally, there should be some sort of cumulative emissions measurement.
-        # This is also important in the case of delaying policies
-
-        # This calculates the different cumulative emissions
-        # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]
-        #    policy_labels = ["BL", "P1", "P2"]
-        #    policy_labels = ["BL", "P1"]
-        # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
-
-        if len(policy_list)>1: # only show when policy comparison possible
-            _, axis = plt.subplots(1, figsize=(15, 10))
-
-            counter = 0
+            counter=0
+            label_list = []
             for df_main, _ in policy_list:
-                # Describe Emissions over time
-                policy_summed = pd.DataFrame(np.zeros((30, 1)),
-                                index=list(range(2020, 2050)), columns=["Summed_Emissions"])
-                policy_summed.loc[2020, "Summed_Emissions"] = df_main.loc[2020, 'Total_Emissions']
+                if counter == 0:
+                    label = "BL"
+                else:
+                    label = f"P{counter}"
+                label_list.append(label)
+                axis.bar(
+                    spaced + counter * 1.5 * width, df_main.loc[self.policy_year], 
+                    width, label=label)
+                counter += 1
 
-                years = list(range(2020, 2050))
-                for year in years:
-                    policy_summed.loc[year+1, "Summed_Emissions"] = (
-                        policy_summed.loc[year, "Summed_Emissions"]
-                        + df_main.loc[year+1, 'Total_Emissions'])
+            # rects1 = axis.bar(
+            #     x + 0 * width, df_main.loc[2025], width, label='BL')
+            # # Extra policies
+            # rects2 = axis.bar(x - 1.5 * width,
+            #                 policy_main.loc[2025], width, label='P1')
+            # # Extra Policies
+            # rects3 = axis.bar(x + 1.5 * width,
+            #                 County_Meath_Emissions_P2.loc[2025], width, label='P2')
+            # # rects4 = ax.bar(x - width / 2, Berlin_Emissions_NA.loc[2025],
+            # #                          width, label='NA')  # Extra Policies
 
-                # # print("The Emissions in 2025 for %s is" % policy,
-                # #   locals()[region + "_Emissions_" + policy].loc[2025,'Total_Emissions'])
-                # print("The Emissions in 2025 for %s is" % policy_abbr,
-                #     baseline_main.loc[2025, 'Total_Emissions'])
 
-                # Make the graph
-                dataframe = policy_summed.copy()
-
-                sectors = list(IW_SECTORS_T.columns)
-
-                #bottom = len(DF) * [0]
-                # for idx, name in enumerate(sectors):
-                #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
-                #  bottom = bottom + self.df_main[name]
-
-                plt.plot(dataframe.index, dataframe.Summed_Emissions, )
-
-                plt.fill_between(dataframe.index, dataframe.Summed_Emissions, alpha=0.4)  # +counter
-
-                counter += 0.1
-
-            #x = np.arange(len(Ireland_Emissions.index))
-            #width = 0.8
-
-            #ax.bar(x, Ireland_Emissions['Housing_Energy'], width, label=abbrev)
-
-            axis.set_title(f"Aggregated per capita Emissions for {self.region} 2020-2050",
-                fontsize=20)
-            axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+            #plt.bar(x_sectors, E_countries_GWP_sectors_pp['EE'], width = 0.5, color='green')
+            #plt.bar(x_sectors, E_countries_GWP_sectors_pp['FI'], width = 0.5,
+            #   color='blue', alpha = 0.5)
+            axis.legend_size = 20
+            axis.set_ylabel('Emissions / kG CO2 eq', fontsize=20)
+            axis.set_xlabel('Emissions sector', fontsize=20)
+            axis.set_title(
+                f'Per capita emissions by sector for {self.region} policies', fontsize=25)
+            axis.set_xticks(spaced)
+            axis.set_xticklabels(df_main.columns, fontsize=15)
+            #ax.set_yticklabels( fontsize = 15)
             axis.tick_params(axis="y", labelsize=15)
-            axis.set_xlabel('Year', fontsize=15)
-            axis.tick_params(axis="x", labelsize=15)
+            axis.legend(prop={'size': 15})
 
-            axis.legend(label_list, loc='upper left', ncol=2, prop={'size': 15})
 
-            #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
+            #x.label(rects1, padding=3)
+            #x.label(rects2, padding=3)
 
-            plt.show()
+            # lt.xlabel("Sectors")
+            #lt.ylabel("CO2 eq /  kG?")
+            #lt.title("Global Emissions by Sector")
+
+            plt.xticks(spaced, df_main.columns, rotation=90)
+
+            #plt.savefig("Sectoral_Graphs_breakdown.jpg",bbox_inches='tight', dpi=300)
+
+            plt.show() # second graph
+
+            ### third graph
+            # Finally, there should be some sort of cumulative emissions measurement.
+            # This is also important in the case of delaying policies
+
+            # This calculates the different cumulative emissions
+            # Policy_labels = ["BL", "MSx50", "SHx50", "EVx50", "NA", "ALLx50_2035", "ALLx50_2025"]
+            #    policy_labels = ["BL", "P1", "P2"]
+            #    policy_labels = ["BL", "P1"]
+            # Policy_labels = ["BL", "RFx50_2025", "RFx50_2035"]#for the graphs
+
+            if len(policy_list)>1: # only show when policy comparison possible
+                _, axis = plt.subplots(1, figsize=(15, 10))
+
+                counter = 0
+                for df_main, _ in policy_list:
+                    # Describe Emissions over time
+                    policy_summed = pd.DataFrame(np.zeros((30, 1)),
+                                    index=list(range(2020, 2050)), columns=["Summed_Emissions"])
+                    policy_summed.loc[2020, "Summed_Emissions"] = \
+                        df_main.loc[2020, 'Total_Emissions']
+
+                    years = list(range(2020, 2050))
+                    for year in years:
+                        policy_summed.loc[year+1, "Summed_Emissions"] = (
+                            policy_summed.loc[year, "Summed_Emissions"]
+                            + df_main.loc[year+1, 'Total_Emissions'])
+
+                    # # print("The Emissions in 2025 for %s is" % policy,
+                    # #   locals()[region + "_Emissions_" + policy].loc[2025,'Total_Emissions'])
+                    # print("The Emissions in 2025 for %s is" % policy_abbr,
+                    #     baseline_main.loc[2025, 'Total_Emissions'])
+
+                    # Make the graph
+                    dataframe = policy_summed.copy()
+
+                    sectors = list(IW_SECTORS_T.columns)
+
+                    #bottom = len(DF) * [0]
+                    # for idx, name in enumerate(sectors):
+                    #   plt.bar(self.df_main.index, self.df_main[name], bottom = bottom)
+                    #  bottom = bottom + self.df_main[name]
+
+                    plt.plot(dataframe.index, dataframe.Summed_Emissions, )
+
+                    plt.fill_between(dataframe.index, dataframe.Summed_Emissions, 
+                        alpha=0.4)  # +counter?
+
+                    counter += 0.1
+
+                #x = np.arange(len(Ireland_Emissions.index))
+                #width = 0.8
+
+                #ax.bar(x, Ireland_Emissions['Housing_Energy'], width, label=abbrev)
+
+                axis.set_title(f"Aggregated per capita Emissions for {self.region} 2020-2050",
+                    fontsize=20)
+                axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
+                axis.tick_params(axis="y", labelsize=15)
+                axis.set_xlabel('Year', fontsize=15)
+                axis.tick_params(axis="x", labelsize=15)
+
+                axis.legend(label_list, loc='upper left', ncol=2, prop={'size': 15})
+
+                #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
+
+                plt.show()
 
 
 def testcase_peter_planner():
@@ -1288,6 +1303,36 @@ def testcase_peter_planner():
         )
     calculation.output_results([(baseline_main, baseline_total_area_emissions),
         (policy_main, policy_total_area_emissions)])
+
+
+@blue_print.route("", methods=["GET", "POST"])
+def route_consumption():
+    request_body = humps.decamelize(request.json)
+
+    # request objects
+    country = request_body["country"]
+    start_year = request_body["year"]
+    policy_start_years = request_body["policy_start_year"]
+    consumption_dict = request_body["consumption"]
+
+    consumption_response = dict()
+
+    for year in range(start_year, start_year + 21):
+    # for year in range(start_year, 2051):
+        consumption_response[year] = calculate_consumption(country, consumption_dict, policy_start_years, year)
+
+    for year in range(start_year + 21, 2051):
+        # pass
+        consumption_response[year] = calculate_consumption_21_to_30(country, consumption_dict, policy_start_years, year)
+          
+    return humps.camelize({
+        "status": "success",
+        "data": {
+            "consumption": consumption_response}
+    })
+
+    # Functionality to implement
+    # everything
 
 
 def main():
