@@ -883,25 +883,27 @@ class Consumption:
         # Scale factor applied to household size - unique value for each decade
         house_scaling = HOUSE_SIZE_PROJ_T.loc[self.country]
 
-        if s_heating:
-            demand_kv=self.demand_kv
-            if district_prop < DELTA_ZERO: # if this is close to zero
-                district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
-                self.district_prop = district_prop
-                sum_all = (demand_kv[LIQUID_TYPES].sum()
-                        + demand_kv[SOLID_TYPES].sum()
-                        + demand_kv[GAS_TYPES].sum())
-                liquids_prop = demand_kv[LIQUID_TYPES].sum() / sum_all
+#        if s_heating: always compute defaults if necessary
+        demand_kv=self.demand_kv
+        if district_prop < DELTA_ZERO: # if this is close to zero
+            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
+            sum_all = (demand_kv[LIQUID_TYPES].sum()
+                    + demand_kv[SOLID_TYPES].sum()
+                    + demand_kv[GAS_TYPES].sum())
+            liquids_prop = demand_kv[LIQUID_TYPES].sum() / sum_all
             solids_prop = demand_kv[SOLID_TYPES].sum() / sum_all
             gases_prop = demand_kv[GAS_TYPES].sum() / sum_all
-                # TODO: verify that these are the right defaults
-            if district_value < DELTA_ZERO: # close to zero
-                district_value = \
-                    self.emission_intensities \
-                        .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
-                self.district_value = district_value
-            else:
-                self.district_value = district_value
+        self.district_prop = district_prop
+        self.liquids_prop = liquids_prop
+        self.solids_prop = solids_prop
+        self.gases_prop = gases_prop
+        if district_value < DELTA_ZERO: # close to zero
+            district_value = \
+                self.emission_intensities \
+                    .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
+            self.district_value = district_value
+        else:
+            self.district_value = district_value
 
         # prepare empty dataframes
         # these are for the graphs
@@ -1405,6 +1407,13 @@ def route_consumption():
             bl_serial[key] = dict(policy_main[key])
         consumption_response["P1"] = bl_serial
         consumption_response["P1_total_emissions"] = dict(policy_total_area_emissions)
+
+    # sometimes these defaults are intersting
+    consumption_response["district_prop"] = calculation.district_prop
+    consumption_response["liquids_prop"] = calculation.liquids_prop
+    consumption_response["solids_prop"] = calculation.solids_prop
+    consumption_response["gases_prop"] = calculation.gases_prop
+    consumption_response["district_value"] = calculation.district_value
 
     print("consumption_response: ###",consumption_response)
     return humps.camelize({
