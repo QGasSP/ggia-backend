@@ -1336,7 +1336,7 @@ def route_consumption():
             value = request_body.get(key, default)
             if type(value) is not bool:
                 value = str(value).lower()
-                value = not (value == "false" or valule == "0")
+                value = not (value == "false" or value == "0")
         except (ValueError, KeyError):
             value=default
         return value
