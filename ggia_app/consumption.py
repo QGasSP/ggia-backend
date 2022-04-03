@@ -54,13 +54,14 @@ import numpy as np
 from flask import Blueprint
 from flask import request
 import humps
-from marshmallow import ValidationError
-from ggia_app.transport_schemas import *
-from ggia_app.models import *
-from ggia_app.env import *
-PLOTTING=False
+PLOTTING = (__name__ == "__main__")  # if called directly enable plotting
 if PLOTTING:
     import matplotlib.pyplot as plt
+else:
+    from marshmallow import ValidationError
+    from ggia_app.transport_schemas import *
+    from ggia_app.models import *
+    from ggia_app.env import *
 
 blue_print = Blueprint("consumption", __name__, url_prefix="/api/v1/calculate/consumption")
 
@@ -1019,7 +1020,7 @@ class Consumption:
 
             # Put the results into sectors
             df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
-            # self.df_tot.loc[year_it] = gwp_ab_pc.sum()
+            # df_tot.loc[year_it] = gwp_ab_pc.sum()
             df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
                 gwp_ab_pc.sum().to_numpy()) * self.pop_size
                 # TODO: check which pop_size should be used here? base or policy
@@ -1056,13 +1057,7 @@ class Consumption:
         ###########################################################################################
         # Adding total emissions by multiplying by population
 
-        # F_tot.columns = Exio_products
-        result1 = df_main.copy()
-        # locals()[region + "_Emissions_tot_" + policy_label] = DF_tot.copy()
-
-        # result2 = df_area.copy() - we only return total emissions
-
-        return (result1, df_area['Total_Emissions'])
+        return (df_main.copy(), df_area['Total_Emissions'].copy())
 
         ### end of emission calculation function ###
 
@@ -1281,35 +1276,35 @@ def testcase_peter_planner():
 
     # policy application and computation
     policy_main, policy_total_area_emissions  = calculation.emission_calculation(
-        policy_year=2025,  # U10.1 - the year the policy is implemented
-        pop_size_policy=205000,  # U10.2 - new total number of people
-        new_floor_area=50000,  # U10.3 - gross SQM
-        # U11.1 - Household energy efficiency
-        eff_gain=True,  # U11.1 - consider “Household energy efficiency”?
-        eff_scaler=10,  # U11.1.1 - percentage energy reduced
-        # U11.2 - Local electricity
-        local_electricity=True,  # U11.2.0 - consider local electricity
-        el_type='Electricity by solar photovoltaic',  # U11.2.1 - source/type
-        el_scaler=5,  # U11.2.2 - percentage of coverage
-        s_heating=True,  # U11.3.0 - heating share?
-        district_prop=0,  # U11.3.1 - breakdown of heating sources 0 -> default
-        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
-        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
-        # solids_prop = 0.0 # U11.3.2a - TODO: no idea
-        # liquids_prop = 0.0 # U11.3.2b - TODO: no idea
-        # gases_prop = 0.0 # U11.3.2c - TODO: no idea
-        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
-            # - emission_intensities   0.0 #  U11.3.3
-        district_value=0,  # U11.3.3 - percentage - direct emissions from district heating
-        biofuel_takeup=True,  # U12.1.0- Consider biofuel in transport?
-        bio_scaler=0,  # 12.1.1 - percentage of transport fuels covered by biofuels
-        ev_takeup=True,  # U12.2.0 - change to electric vehicles
-        ev_scaler=0,  # U12.2.1 - percentage of private vehicles that are electric
-        modal_shift = True,  # U12.3.0 - Consider transport modal shift?
-        ms_fuel_scaler = 4,  # U12.3.1 - percentage of private vehicle use reduction
-        ms_veh_scaler = 4,  # U12.3.2 - percentage of private vehicle ownership reduction
-        ms_pt_scaler = 4,  # U12.3.3 - percentage of public transport use increase
-        )
+            policy_year=2025,  # U10.1 - the year the policy is implemented
+            pop_size_policy=205000,  # U10.2 - new total number of people
+            new_floor_area=50000,  # U10.3 - gross SQM
+            # U11.1 - Household energy efficiency
+            eff_gain=True,  # U11.1 - consider “Household energy efficiency”?
+            eff_scaler=10,  # U11.1.1 - percentage energy reduced
+            # U11.2 - Local electricity
+            local_electricity=True,  # U11.2.0 - consider local electricity
+            el_type='Electricity by solar photovoltaic',  # U11.2.1 - source/type
+            el_scaler=5,  # U11.2.2 - percentage of coverage
+            s_heating=True,  # U11.3.0 - heating share?
+            district_prop=0,  # U11.3.1 - breakdown of heating sources 0 -> default
+            # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
+            # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+            # solids_prop = 0.0 # U11.3.2a - TODO: no idea
+            # liquids_prop = 0.0 # U11.3.2b - TODO: no idea
+            # gases_prop = 0.0 # U11.3.2c - TODO: no idea
+            # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
+                # - emission_intensities   0.0 #  U11.3.3
+            district_value=0,  # U11.3.3 - percentage - direct emissions from district heating
+            biofuel_takeup=True,  # U12.1.0- Consider biofuel in transport?
+            bio_scaler=0,  # 12.1.1 - percentage of transport fuels covered by biofuels
+            ev_takeup=True,  # U12.2.0 - change to electric vehicles
+            ev_scaler=0,  # U12.2.1 - percentage of private vehicles that are electric
+            modal_shift = True,  # U12.3.0 - Consider transport modal shift?
+            ms_fuel_scaler = 4,  # U12.3.1 - percentage of private vehicle use reduction
+            ms_veh_scaler = 4,  # U12.3.2 - percentage of private vehicle ownership reduction
+            ms_pt_scaler = 4,  # U12.3.3 - percentage of public transport use increase
+            )
     calculation.output_results([(baseline_main, baseline_total_area_emissions),
         (policy_main, policy_total_area_emissions)])
 
@@ -1339,13 +1334,13 @@ def route_consumption():
     def getb(key, default=False):
         try:
             value = request_body.get(key, default)
-            if type(value) is not bool:
+            if isinstance(value, bool):
                 value = str(value).lower()
-                value = not (value == "false" or value == "0")
+                value = not (value == "" or value == "false" or value == "0")
         except (ValueError, KeyError):
             value=default
         return value
- 
+
     calculation = Consumption(
         geti("year"), # required
         get("country"), # required
@@ -1355,13 +1350,10 @@ def route_consumption():
         house_size=getf("house_size", "0"), # U9.3: if 0, picks default
         income_choice=geti("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
         eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5: fast, normal*, slow - * is default
-        )
+    )
 
     # baseline computation
     baseline_main, baseline_total_area_emissions = calculation.emission_calculation()
-
-#    # print the results (and draw the graph)
-#    calculation.output_results([(baseline_main, baseline_total_area_emissions)])
 
     sectors = list(IW_SECTORS_T.columns)
 
@@ -1370,48 +1362,50 @@ def route_consumption():
     for key in sectors:
         bl_serial[key] = dict(baseline_main[key])
     consumption_response["BL"] = bl_serial
-    consumption_response["BL_total_emissions"] = dict(baseline_total_area_emissions)
+    consumption_response["BL_total_emissions"] = dict(baseline_main["Total_Emissions"])
+    consumption_response["BL_total_area_emissions"] = dict(baseline_total_area_emissions)
 
     # policy application and computation
-    policy_main, policy_total_area_emissions  = calculation.emission_calculation(
-        policy_year=geti("policy_year", calculation.year),  # U10.1 - the year the policy is implemented
-        pop_size_policy=geti("pop_size_policy"),  # U10.2 - new total number of people
-        new_floor_area=geti("new_floor_area"),  # U10.3 - gross SQM
-        # U11.1 - Household energy efficiency
-        eff_gain=getb("eff_gain"), # U11.1 - consider “Household energy efficiency”?
-        eff_scaler=getf("eff_scaler"),  # U11.1.1 - percentage energy reduced
-        # U11.2 - Local electricity
-        local_electricity=getb("local_electricity"),  # U11.2.0 - consider local electricity
-        el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
-        el_scaler=getf("el_scaler"),  # U11.2.2 - percentage of coverage
-        s_heating=getb("s_heating"),  # U11.3.0 - heating share?
-        district_prop=getf("district_prop", 0),  # U11.3.1 - breakdown of heating sources 0->default
-        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
-        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
-        solids_prop=getf("solids_prop"), # U11.3.2a - TODO: no idea
-        liquids_prop=getf("liquids_prop"), # U11.3.2b - TODO: no idea
-        gases_prop=getf("gases_prop"), # U11.3.2c - TODO: no idea
-        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
-            # - emission_intensities   0.0 #  U11.3.3
-        district_value=getf("district_value"),  # U11.3.3 - percentage 
-                                                # - direct emissions from district heating
-        biofuel_takeup=getb("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
-        bio_scaler=getf("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered by biofuels
-        ev_takeup=getb("ev_takeup"),  # U12.2.0 - change to electric vehicles
-        ev_scaler=getf("ev_scaler"),  # U12.2.1 - percentage of private vehicles that are electric
-        modal_shift=getb("modal_shift"),  # U12.3.0 - Consider transport modal shift?
-        ms_fuel_scaler=getf("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle reduction
-        ms_veh_scaler=getf("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle 
-                                              # ownership reduction
-        ms_pt_scaler=getf("ms_pt_scaler"),  # U12.3.3 - percentage of public transport use increase
-    )
+    policy_main, policy_total_area_emissions  = \
+            calculation.emission_calculation(
+            policy_year=geti("policy_year", calculation.year),  # U10.1 - the year the policy is implemented
+            pop_size_policy=geti("pop_size_policy"),  # U10.2 - new total number of people
+            new_floor_area=geti("new_floor_area"),  # U10.3 - gross SQM
+            # U11.1 - Household energy efficiency
+            eff_gain=getb("eff_gain"), # U11.1 - consider “Household energy efficiency”?
+            eff_scaler=getf("eff_scaler"),  # U11.1.1 - percentage energy reduced
+            # U11.2 - Local electricity
+            local_electricity=getb("local_electricity"),  # U11.2.0 - consider local electricity
+            el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
+            el_scaler=getf("el_scaler"),  # U11.2.2 - percentage of coverage
+            s_heating=getb("s_heating"),  # U11.3.0 - heating share?
+            district_prop=getf("district_prop", 0),  # U11.3.1 - breakdown of heating sources 0->default
+            # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
+            # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+            solids_prop=getf("solids_prop"), # U11.3.2a - TODO: no idea
+            liquids_prop=getf("liquids_prop"), # U11.3.2b - TODO: no idea
+            gases_prop=getf("gases_prop"), # U11.3.2c - TODO: no idea
+            # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
+                # - emission_intensities   0.0 #  U11.3.3
+            district_value=getf("district_value"),  # U11.3.3 - percentage 
+                                                    # - direct emissions from district heating
+            biofuel_takeup=getb("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
+            bio_scaler=getf("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered by biofuels
+            ev_takeup=getb("ev_takeup"),  # U12.2.0 - change to electric vehicles
+            ev_scaler=getf("ev_scaler"),  # U12.2.1 - percentage of private vehicles that are electric
+            modal_shift=getb("modal_shift"),  # U12.3.0 - Consider transport modal shift?
+            ms_fuel_scaler=getf("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle reduction
+            ms_veh_scaler=getf("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle 
+                                                # ownership reduction
+            ms_pt_scaler=getf("ms_pt_scaler"),  # U12.3.3 - percentage of public transport use increase
+        )
 
     if not calculation.is_baseline:
-        policy_serial = dict()
         for key in sectors:
             bl_serial[key] = dict(policy_main[key])
         consumption_response["P1"] = bl_serial
-        consumption_response["P1_total_emissions"] = dict(policy_total_area_emissions)
+        consumption_response["P1_total_emissions"] = dict(policy_main["Total_Emissions"])
+        consumption_response["P1_total_area_emissions"] = dict(policy_total_area_emissions)
 
     # sometimes these defaults are intersting
     consumption_response["district_prop"] = calculation.district_prop * 100
@@ -1420,7 +1414,7 @@ def route_consumption():
     consumption_response["gases_prop"] = calculation.gases_prop * 100
     consumption_response["district_value"] = calculation.district_value
 
-    print("consumption_response: ###",consumption_response)
+    print("consumption_response: ###", consumption_response)
     return humps.camelize({
         "status": "success",
         "data": {
