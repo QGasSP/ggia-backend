@@ -1075,6 +1075,15 @@ class Consumption:
         # The construction Emissions are now shown here.
 
         df_main, df_total_area_emissions = policy_list[0]
+        df_policy, df_policy_total_area_emissions = None, 0
+        # policy_indexes = []
+        if len(policy_list) > 1:
+            df_policy, df_policy_total_area_emissions = policy_list[1]
+            # policy_indexes = [f"p{index}" for index in df_policy.index]
+            # merged_indexes = []
+            # for a,b in zip(df_main.index, policy_indexes):
+            #     merged_indexes.append(a)
+            #     merged_indexes.append(b)
 
         if PLOTTING:
             _, axis = plt.subplots(1, figsize=(15, 10))
@@ -1083,11 +1092,17 @@ class Consumption:
             sectors = list(IW_SECTORS_T.columns)
 
             bottom = len(df_main) * [0]
-            for _, name in enumerate(sectors):
-                plt.bar(df_main.index, df_main[name], bottom=bottom)
-                bottom = bottom + df_main[name]
+            for sector in sectors:
+                if len(policy_list) > 1:
+                    plt.bar(df_policy.index, df_policy[sector], bottom=bottom)
+                    bottom = bottom + df_policy[sector]
+                else: # only baseline
+                    plt.bar(df_main.index, df_main[sector], bottom=bottom)
+                    bottom = bottom + df_main[sector]
 
-            plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+            if len(policy_list) > 1:
+                # plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+                df_main['Total_Emissions'].plot(kind='line', color='black', ms=10)
 
             axis.set_title(f"Annual Household Emissions for {self.region}", fontsize=20)
             axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
@@ -1095,7 +1110,7 @@ class Consumption:
             axis.set_xlabel('Year', fontsize=15)
             axis.tick_params(axis="x", labelsize=15)
 
-            axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+            axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 10})
 
             plt.show()  # first graph
 
@@ -1140,8 +1155,8 @@ class Consumption:
                     label = f"P{counter}"
                 label_list.append(label)
                 axis.bar(
-                    spaced + counter * 1.5 * width, df_main.loc[self.policy_year], 
-                    width, label=label)
+                    spaced + counter * 1.5 * width, df_main.loc[self.policy_year],
+                        width, label=label)
                 counter += 1
 
             # rects1 = axis.bar(
