@@ -870,9 +870,11 @@ class Consumption:
 
         if policy_year is None:
             policy_year = self.year
+        self.policy_year = policy_year
 
-        if pop_size_policy is None:
+        if pop_size_policy is None or pop_size_policy < DELTA_ZERO:
             pop_size_policy = self.pop_size
+        self.pop_size_policy = pop_size_policy
 
         # if anything will be modified, this is not a baseline - TODO: check with Peter
         self.is_baseline = not (eff_gain or local_electricity or s_heating or ev_takeup or modal_shift)
@@ -1032,6 +1034,9 @@ class Consumption:
 
         if not self.is_baseline:
             building_emissions = 0
+
+            pop_size = self.pop_size_policy # TODO this is probably wrong,
+            # but no feedback from stakeholder and no tests, see todo above rgd. pop_size
 
             if self.country in NORTH:
                 building_emissions = 350 * new_floor_area/pop_size
@@ -1409,10 +1414,10 @@ def route_consumption():
         consumption_response["P1_total_emissions"] = dict(policy_total_area_emissions)
 
     # sometimes these defaults are intersting
-    consumption_response["district_prop"] = calculation.district_prop
-    consumption_response["liquids_prop"] = calculation.liquids_prop
-    consumption_response["solids_prop"] = calculation.solids_prop
-    consumption_response["gases_prop"] = calculation.gases_prop
+    consumption_response["district_prop"] = calculation.district_prop * 100
+    consumption_response["liquids_prop"] = calculation.liquids_prop * 100
+    consumption_response["solids_prop"] = calculation.solids_prop * 100
+    consumption_response["gases_prop"] = calculation.gases_prop * 100
     consumption_response["district_value"] = calculation.district_value
 
     print("consumption_response: ###",consumption_response)
