@@ -1374,11 +1374,18 @@ def route_consumption():
 
     consumption_response = dict()
     bl_serial = dict()
+    bl_max = 0.0
     for key in sectors:
         bl_serial[key] = dict(baseline_main[key])
+        new_max = baseline_main[key].max()
+        if new_max > bl_max:
+            bl_max = new_max
     consumption_response["BL"] = bl_serial
+    consumption_response["BL_max"] = new_max
     consumption_response["BL_total_emissions"] = dict(baseline_main["Total_Emissions"])
+    consumption_response["BL_total_emissions_max"] = baseline_main["Total_Emissions"].max()
     consumption_response["BL_total_area_emissions"] = dict(baseline_total_area_emissions)
+    consumption_response["BL_total_area_emissions_max"] = baseline_total_area_emissions.max()
 
     # policy application and computation
     policy_main, policy_total_area_emissions  = \
@@ -1420,7 +1427,9 @@ def route_consumption():
             bl_serial[key] = dict(policy_main[key])
         consumption_response["P1"] = bl_serial
         consumption_response["P1_total_emissions"] = dict(policy_main["Total_Emissions"])
+        consumption_response["P1_total_emissions_max"] = policy_main["Total_Emissions"].max()
         consumption_response["P1_total_area_emissions"] = dict(policy_total_area_emissions)
+        consumption_response["P1_total_area_emissions_max"] = policy_total_area_emissions.max()
 
     # sometimes these defaults are intersting
     consumption_response["district_prop"] = calculation.district_prop * 100
