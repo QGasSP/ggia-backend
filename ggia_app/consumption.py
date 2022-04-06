@@ -743,10 +743,13 @@ class Consumption:
           Careful, this means this field is permanently changed after a call to this method
         """
 
-       # total_heat_fuel = demand_kv[DISTRICT_SERVICE_LABEL] + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
-       #                     + self.adjustable_amounts["elec_heat"]
-       #                     + self.adjustable_amounts["elec_cool"])/self.elec_price + demand_kv[LIQUID_TYPES].sum() + demand_kv[SOLID_TYPES].sum() + demand_kv[GAS_TYPES].sum()
-        
+        # total_heat_fuel = (demand_kv[DISTRICT_SERVICE_LABEL]
+        #       + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
+        #       + self.adjustable_amounts["elec_heat"]
+        #       + self.adjustable_amounts["elec_cool"]
+        #     )/self.elec_price + demand_kv[LIQUID_TYPES].sum() \
+        #       + demand_kv[SOLID_TYPES].sum() + demand_kv[GAS_TYPES].sum()
+
         # DISTRICT HEATING
         local_demand_kv[DISTRICT_SERVICE_LABEL] = total_heat_fuel * district_prop
 
@@ -902,13 +905,13 @@ class Consumption:
             + demand_kv[LIQUID_TYPES].sum() + demand_kv[SOLID_TYPES].sum()
             + demand_kv[GAS_TYPES].sum())
 
-        if (district_prop < DELTA_ZERO 
+        if (district_prop < DELTA_ZERO
             and electricity_heat_prop < DELTA_ZERO
             and combustable_fuels_prop < DELTA_ZERO): # if this is close to zero
             district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel
             self.district_prop = district_prop
 
-            electricity_heat_prop = (demand_kv[ELECTRICITY_TYPES].sum() * 
+            electricity_heat_prop = (demand_kv[ELECTRICITY_TYPES].sum() *
                 (self.adjustable_amounts["elec_water"]
                     + self.adjustable_amounts["elec_heat"]
                     + self.adjustable_amounts["elec_cool"])/self.elec_price) / total_heat_fuel
@@ -923,7 +926,8 @@ class Consumption:
             gases_prop = 0
 
         if liquids_prop < DELTA_ZERO and solids_prop < DELTA_ZERO and gases_prop < DELTA_ZERO:
-            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
+            # district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
+            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel  # TODO: check, use total_heat here too?
             sum_all = (demand_kv[LIQUID_TYPES].sum()
                     + demand_kv[SOLID_TYPES].sum()
                     + demand_kv[GAS_TYPES].sum())
@@ -991,11 +995,13 @@ class Consumption:
                 ############## Local_Electricity ###################################
                 ####################### U11.2 ######################################
                 if local_electricity:
-                    self.local_generation(local_demand_kv, local_emission_intensities, el_scaler, el_type)
+                    self.local_generation(local_demand_kv, local_emission_intensities,
+                        el_scaler, el_type)
 
                 if s_heating:
-                    self.local_heating(local_demand_kv, local_emission_intensities, self.district_prop,
-                        self.electricity_heat_prop, self.combustable_fuels_prop,
+                    self.local_heating(local_demand_kv, local_emission_intensities,
+                        self.district_prop, self.electricity_heat_prop,
+                        self.combustable_fuels_prop,
                         self.liquids_prop, self.gases_prop, self.solids_prop,
                         self.district_value, total_heat_fuel)
 
@@ -1044,7 +1050,7 @@ class Consumption:
 
             # Then we have to recalculate
             # GWP: Global Warming Potential (could be also called Emissions)
-                    
+
             house_size *= house_mult  # scaling for house size
 
             if year_it >= self.year:
@@ -1066,7 +1072,7 @@ class Consumption:
                 # print(year_it)
 
                 #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
-            
+
                 gwp_ab_pc = gwp_ab / house_size
 
                 # Put the results into sectors
@@ -1124,10 +1130,12 @@ class Consumption:
         # The construction Emissions are now shown here.
 
         df_main, df_total_area_emissions = policy_list[0]
-        df_policy, df_policy_total_area_emissions = None, 0
         # policy_indexes = []
+        # df_policy, df_policy_total_area_emissions = None, 0
+        df_policy = None
         if len(policy_list) > 1:
-            df_policy, df_policy_total_area_emissions = policy_list[1]
+            # df_policy, df_policy_total_area_emissions = policy_list[1]
+            df_policy, _ = policy_list[1]
             # policy_indexes = [f"p{index}" for index in df_policy.index]
             # merged_indexes = []
             # for a,b in zip(df_main.index, policy_indexes):
@@ -1150,7 +1158,8 @@ class Consumption:
                     bottom = bottom + df_main[sector]
 
             if len(policy_list) > 1:
-                # plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+                # plt.bar(df_main.index, df_main['Total_Emissions'],
+                #   edgecolor='black', color='none')
                 df_main['Total_Emissions'].plot(kind='line', color='black', ms=10)
 
             axis.set_title(f"Annual Household Emissions for {self.region}", fontsize=20)
@@ -1292,7 +1301,7 @@ class Consumption:
 
                     plt.plot(dataframe.index, dataframe.Summed_Emissions, )
 
-                    plt.fill_between(dataframe.index, dataframe.Summed_Emissions, 
+                    plt.fill_between(dataframe.index, dataframe.Summed_Emissions,
                         alpha=0.4)  # +counter?
 
                     counter += 0.1
@@ -1311,7 +1320,7 @@ class Consumption:
 
                 axis.legend(label_list, loc='upper left', ncol=2, prop={'size': 15})
 
-                #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
+                # plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
                 plt.show()
 
@@ -1383,19 +1392,19 @@ def route_consumption():
     ## Helper functions
     def get(key, default=None):
         return request_body.get(key, default)
-    def geti(key, default=0):
+    def get_int(key, default=0):
         try:
             value = int(request_body.get(key, default))
         except (ValueError, KeyError):
             value = default
         return value
-    def getf(key, default=0.0):
+    def get_float(key, default=0.0):
         try:
             value = float(request_body.get(key, default))
         except (ValueError, KeyError):
             value = default
         return value
-    def getb(key, default=False):
+    def get_bool(key, default=False):
         try:
             value = request_body.get(key, default)
             if isinstance(value, bool):
@@ -1406,14 +1415,15 @@ def route_consumption():
         return value
 
     calculation = Consumption(
-        geti("year"), # required
+        get_int("year"), # required
         get("country"), # required
-        geti("pop_size"), # required
+        get_int("pop_size"), # required
         region=get("region"), # optional (else undefined)
         area_type=get("area_type", "average"),  # U9.4: average*, town, city, rural
-        house_size=getf("house_size", "0"), # U9.3: if 0, picks default
-        income_choice=geti("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
-        eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5: fast, normal*, slow - * is default
+        house_size=get_float("house_size", "0"), # U9.3: if 0, picks default
+        income_choice=get_int("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
+        eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5:
+            # fast, normal*, slow - * is default
     )
 
     # baseline computation
@@ -1439,44 +1449,47 @@ def route_consumption():
     # policy application and computation
     policy_main, policy_total_area_emissions  = \
             calculation.emission_calculation(
-            policy_year=geti("policy_year", calculation.year),  # U10.1 
+            policy_year=get_int("policy_year", calculation.year),  # U10.1
                                     # - the year the policy is implemented
-            pop_size_policy=geti("pop_size_policy"),  # U10.2 - new total number of people
-            new_floor_area=geti("new_floor_area"),  # U10.3 - gross SQM
+            pop_size_policy=get_int("pop_size_policy"),  # U10.2 - new total number of people
+            new_floor_area=get_int("new_floor_area"),  # U10.3 - gross SQM
             # U11.1 - Household energy efficiency
-            eff_gain=getb("eff_gain"), # U11.1 - consider “Household energy efficiency”?
-            eff_scaler=getf("eff_scaler"),  # U11.1.1 - percentage energy reduced
+            eff_gain=get_bool("eff_gain"), # U11.1 - consider “Household energy efficiency”?
+            eff_scaler=get_float("eff_scaler"),  # U11.1.1 - percentage energy reduced
             # U11.2 - Local electricity
-            local_electricity=getb("local_electricity"),  # U11.2.0 - consider local electricity
+            local_electricity=get_bool("local_electricity"),  # U11.2.0 - consider local electricity
             el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
-            el_scaler=getf("el_scaler"),  # U11.2.2 - percentage of coverage
-            s_heating=getb("s_heating"),  # U11.3.0 - heating share?
-            district_prop=getf("district_prop", 0),  # U11.3.1 
+            el_scaler=get_float("el_scaler"),  # U11.2.2 - percentage of coverage
+            s_heating=get_bool("s_heating"),  # U11.3.0 - heating share?
+            district_prop=get_float("district_prop", 0),  # U11.3.1
                 # - breakdown of heating sources 0->default
-            electricity_heat_prop=getf("electricity_heat_prop", 0), # breakdown of heating 
+            electricity_heat_prop=get_float("electricity_heat_prop", 0), # breakdown of heating
                 # sources 0->default
-            combustable_fuels_prop=getf("combustable_fuels_prop", 0), # breakdown of heating 
+            combustable_fuels_prop=get_float("combustable_fuels_prop", 0), # breakdown of heating
                 # sources 0->default
             # the next three are the breakdowns of combustable fuels (and should sum up to 100)
-            solids_prop=getf("solids_prop"),  # U11.3.2a - breakdown of heating sources 0->default
-            liquids_prop=getf("liquids_prop"),  # U11.3.2b - breakdown of heating sources 0->default
-            gases_prop=getf("gases_prop"),  # U11.3.2c - breakdown of heating sources 0->default
+            solids_prop=get_float("solids_prop"),  # U11.3.2a
+                # - breakdown of heating sources 0->default
+            liquids_prop=get_float("liquids_prop"),  # U11.3.2b
+                # - breakdown of heating sources 0->default
+            gases_prop=get_float("gases_prop"),  # U11.3.2c
+                # - breakdown of heating sources 0->default
             # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
                 # - emission_intensities   0.0 #  U11.3.3
-            district_value=getf("district_value"),  # U11.3.3 - percentage 
-                                                    # - direct emissions from district heating
-            biofuel_takeup=getb("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
-            bio_scaler=getf("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered by 
-                # biofuels
-            ev_takeup=getb("ev_takeup"),  # U12.2.0 - change to electric vehicles
-            ev_scaler=getf("ev_scaler"),  # U12.2.1 - percentage of private vehicles 
+            district_value=get_float("district_value"),  # U11.3.3 - percentage
+                # - direct emissions from district heating
+            biofuel_takeup=get_bool("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
+            bio_scaler=get_float("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered
+                # by biofuels
+            ev_takeup=get_bool("ev_takeup"),  # U12.2.0 - change to electric vehicles
+            ev_scaler=get_float("ev_scaler"),  # U12.2.1 - percentage of private vehicles
                 # that are electric
-            modal_shift=getb("modal_shift"),  # U12.3.0 - Consider transport modal shift?
-            ms_fuel_scaler=getf("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle 
+            modal_shift=get_bool("modal_shift"),  # U12.3.0 - Consider transport modal shift?
+            ms_fuel_scaler=get_float("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle
                 # reduction
-            ms_veh_scaler=getf("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle 
-                                                # ownership reduction
-            ms_pt_scaler=getf("ms_pt_scaler"),  # U12.3.3 - percentage of public transport
+            ms_veh_scaler=get_float("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle
+                # ownership reduction
+            ms_pt_scaler=get_float("ms_pt_scaler"),  # U12.3.3 - percentage of public transport
                 # use increase
         )
 
