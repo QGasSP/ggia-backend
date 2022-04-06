@@ -926,8 +926,7 @@ class Consumption:
             gases_prop = 0
 
         if liquids_prop < DELTA_ZERO and solids_prop < DELTA_ZERO and gases_prop < DELTA_ZERO:
-            # district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
-            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel  # TODO: check, use total_heat here too?
+            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel
             sum_all = (demand_kv[LIQUID_TYPES].sum()
                     + demand_kv[SOLID_TYPES].sum()
                     + demand_kv[GAS_TYPES].sum())
