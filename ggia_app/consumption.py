@@ -49,6 +49,7 @@
 
 # Loading Python Libraries
 import os
+import glob
 import pandas as pd
 import numpy as np
 from flask import Blueprint
@@ -87,6 +88,19 @@ Y_VECTORS = {
     'city': pd.read_csv(CSV_PATH + "City_2020_Exio_elec_trans_en_Euro.csv", index_col=0),
     'rural': pd.read_csv(CSV_PATH + "Rural_2020_Exio_elec_trans_en_Euro.csv", index_col=0),
     'town': pd.read_csv(CSV_PATH + "Town_2020_Exio_elec_trans_en_Euro.csv", index_col=0) }
+
+# Local datasets read from CSV-path local
+CSV_PATH_LOCAL = os.path.join(CSV_PATH + "datasets", "")
+Y_VECTORS_LOCAL = {}
+for file in glob.glob(CSV_PATH_LOCAL + "*.csv"):
+    try:
+        local_table = pd.read_csv(file, index_col=0)
+        if Y_VECTORS['average'].index.equals(local_table.index):  # small format check
+            name = os.path.basename(file).split("_")[0] + ": " + local_table.columns[0]
+            Y_VECTORS_LOCAL[name] = local_table[local_table.columns[0]].copy()
+    except (FileNotFoundError, IndexError, KeyError, pd.errors.ParserError):
+        pass
+
 
 # Load the Use phase and tail pipe emissions.
 USE_PHASE_T = pd.read_csv(CSV_PATH + "Energy_use_phase_Euro.csv", index_col=0)
@@ -346,6 +360,8 @@ class Consumption:
 
     def __init__(self, year, country, pop_size,
             region=None, # region is just a name for working on a specific subset of a country
+            local_dataset=None,  # if this is a string and a correspnding local dataset exists,
+                # country data will be overwritten and area type will be ignored
             area_type="average",
             house_size=0.0, # U9.3
             # income choice should be:
@@ -368,8 +384,18 @@ class Consumption:
             self.region = self.country
         self.area_type = area_type
 
-        # initial demand vector
-        self.demand_kv = Y_VECTORS[area_type][country].copy()
+        self.local_dataset = local_dataset
+        if self.local_dataset is not None and self.local_dataset in Y_VECTORS_LOCAL:
+            name_split = self.local_dataset.split(": ")
+            if len(name_split) == 2:
+                self.country = name_split[0]
+                self.region = name_split[1]
+
+            # initial demand vector
+            self.demand_kv = Y_VECTORS_LOCAL[self.local_dataset]
+        else:
+            # initial demand vector
+            self.demand_kv = Y_VECTORS[area_type][country].copy()
 
         # U9.3: House_size
         # example: self.house_size = 2.14
@@ -394,7 +420,7 @@ class Consumption:
         # 1st household is the richest.
         # if self.income_choice == "3rd_household":
         #    income_scaler = 1
-        self.demand_kv *= income_scaler * elasticity
+        self.demand_kv *= income_scaler * elasticity  # TODO: check with Peter about local dataset
 
         # U9.5: This is the expected global reduction in product emissions
         # Suggestion - Just give the user one of three options, with the default being normal
@@ -1333,6 +1359,7 @@ def testcase_peter_planner():
         country="Ireland", # required
         pop_size=195000, # required
         region="Meath County", # optional (else undefined)
+        # local_dataset="Austria: Vienna Test",  # enable for local dataset testing
         #area_type="average",  # U9.4: average*, town, city, rural
         #house_size=0, # U9.3: if 0, picks default
         #income_choice=0, # 0 or 3 means average (3rd_household, 40-60%)
@@ -1418,6 +1445,7 @@ def route_consumption():
         get("country"), # required
         get_int("pop_size"), # required
         region=get("region"), # optional (else undefined)
+        local_dataset=get("local_dataset"), # optional (else undefined), local dataset name
         area_type=get("area_type", "average"),  # U9.4: average*, town, city, rural
         house_size=get_float("house_size", "0"), # U9.3: if 0, picks default
         income_choice=get_int("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
@@ -1518,8 +1546,22 @@ def route_consumption():
         }
     })
 
-    # Functionality to implement
-    # everything
+
+@blue_print.route("datasets", methods=["GET"])
+def route_datasets():
+    """
+    return the names of vectors of local datasets
+    """
+    datasets = [] 
+    for key in  Y_VECTORS_LOCAL.keys():
+        datasets.append(key)
+
+    return {
+        "status": "success",
+        "data": {
+            "datasets": datasets
+        }
+    }
 
 
 def main():
