@@ -362,7 +362,7 @@ class Consumption:
             region=None, # region is just a name for working on a specific subset of a country
             local_dataset=None,  # if this is a string and a correspnding local dataset exists,
                 # country data will be overwritten and area type will be ignored
-            area_type="average",
+            area_type=None,
             house_size=0.0, # U9.3
             # income choice should be:
             # 1 for bottom 20; 1st_household
@@ -383,9 +383,13 @@ class Consumption:
         if region is None:
             self.region = self.country
         self.area_type = area_type
+        if area_type is None or area_type=="":
+            self.area_type = "average"
+        area_type = self.area_type
 
         self.local_dataset = local_dataset
-        if self.local_dataset is not None and self.local_dataset in Y_VECTORS_LOCAL:
+        if self.local_dataset is not None \
+            and self.local_dataset in Y_VECTORS_LOCAL:
             name_split = self.local_dataset.split(": ")
             if len(name_split) == 2:
                 self.country = name_split[0]
@@ -1414,6 +1418,7 @@ def route_consumption():
     Handle rest call.
     """
     request_body = humps.decamelize(request.json)
+    print("### request_body: ", request_body)
 
     ## Helper functions
     def get(key, default=None):
@@ -1538,7 +1543,7 @@ def route_consumption():
     consumption_response["electricity_heat_prop"] = calculation.electricity_heat_prop * 100
     consumption_response["district_value"] = calculation.district_value
 
-    print("consumption_response: ###", consumption_response)
+    # print("consumption_response: ###", consumption_response)
     return humps.camelize({
         "status": "success",
         "data": {
