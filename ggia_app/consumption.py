@@ -49,18 +49,20 @@
 
 # Loading Python Libraries
 import os
+import glob
 import pandas as pd
 import numpy as np
 from flask import Blueprint
 from flask import request
 import humps
-from marshmallow import ValidationError
-from ggia_app.transport_schemas import *
-from ggia_app.models import *
-from ggia_app.env import *
-PLOTTING=False
+PLOTTING = (__name__ == "__main__")  # if called directly enable plotting
 if PLOTTING:
     import matplotlib.pyplot as plt
+else:
+    from marshmallow import ValidationError
+    from ggia_app.transport_schemas import *
+    from ggia_app.models import *
+    from ggia_app.env import *
 
 blue_print = Blueprint("consumption", __name__, url_prefix="/api/v1/calculate/consumption")
 
@@ -86,6 +88,19 @@ Y_VECTORS = {
     'city': pd.read_csv(CSV_PATH + "City_2020_Exio_elec_trans_en_Euro.csv", index_col=0),
     'rural': pd.read_csv(CSV_PATH + "Rural_2020_Exio_elec_trans_en_Euro.csv", index_col=0),
     'town': pd.read_csv(CSV_PATH + "Town_2020_Exio_elec_trans_en_Euro.csv", index_col=0) }
+
+# Local datasets read from CSV-path local
+CSV_PATH_LOCAL = os.path.join(CSV_PATH + "datasets", "")
+Y_VECTORS_LOCAL = {}
+for file in glob.glob(CSV_PATH_LOCAL + "*.csv"):
+    try:
+        local_table = pd.read_csv(file, index_col=0)
+        if Y_VECTORS['average'].index.equals(local_table.index):  # small format check
+            name = os.path.basename(file).split("_")[0] + ": " + local_table.columns[0]
+            Y_VECTORS_LOCAL[name] = local_table[local_table.columns[0]].copy()
+    except (FileNotFoundError, IndexError, KeyError, pd.errors.ParserError):
+        pass
+
 
 # Load the Use phase and tail pipe emissions.
 USE_PHASE_T = pd.read_csv(CSV_PATH + "Energy_use_phase_Euro.csv", index_col=0)
@@ -272,6 +287,7 @@ class Consumption:
     area_type = str()   # Required #4_options in drop down menu
                         # - average, rural, city, town (former U_type)
     pop_size = int()  # Required - completely open
+    pop_size_policy = int()  # Required for policy (if not given defaults to pop_size)
 
 
     house_size = float()  # completely open, but with a default value.
@@ -344,7 +360,9 @@ class Consumption:
 
     def __init__(self, year, country, pop_size,
             region=None, # region is just a name for working on a specific subset of a country
-            area_type="average",
+            local_dataset=None,  # if this is a string and a correspnding local dataset exists,
+                # country data will be overwritten and area type will be ignored
+            area_type=None,
             house_size=0.0, # U9.3
             # income choice should be:
             # 1 for bottom 20; 1st_household
@@ -361,11 +379,27 @@ class Consumption:
         self.country = country
         self.abbrev = COUNTRY_ABBREVIATIONS[country]
         self.pop_size = pop_size
-        self.region = region  # TODO: region might have to be country if None
+        self.region = region
+        if region is None:
+            self.region = self.country
         self.area_type = area_type
+        if area_type is None or area_type=="":
+            self.area_type = "average"
+        area_type = self.area_type
 
-        # initial demand vector
-        self.demand_kv = Y_VECTORS[area_type][country].copy()
+        self.local_dataset = local_dataset
+        if self.local_dataset is not None \
+            and self.local_dataset in Y_VECTORS_LOCAL:
+            name_split = self.local_dataset.split(": ")
+            if len(name_split) == 2:
+                self.country = name_split[0]
+                self.region = name_split[1]
+
+            # initial demand vector
+            self.demand_kv = Y_VECTORS_LOCAL[self.local_dataset]
+        else:
+            # initial demand vector
+            self.demand_kv = Y_VECTORS[area_type][country].copy()
 
         # U9.3: House_size
         # example: self.house_size = 2.14
@@ -390,7 +424,7 @@ class Consumption:
         # 1st household is the richest.
         # if self.income_choice == "3rd_household":
         #    income_scaler = 1
-        self.demand_kv *= income_scaler * elasticity
+        self.demand_kv *= income_scaler * elasticity  # TODO: check with Peter about local dataset
 
         # U9.5: This is the expected global reduction in product emissions
         # Suggestion - Just give the user one of three options, with the default being normal
@@ -437,7 +471,7 @@ class Consumption:
     # Policy "functions"
     # The different Policies are written as functions to reduce the length of the calculation code
 
-    def biofuels(self, scaler):
+    def biofuels(self, local_demand_kv, scaler):
         """
         This is a policy.
 
@@ -462,22 +496,21 @@ class Consumption:
         - demand_kv[GAS_DIESEL_OIL] - careful, this means this field is permanently changed after
                                         a call
         """
-        demand_kv = self.demand_kv  # shortcut to work on this field
 
         #
         # current_biofuels = demand_loc_KV['Biogasaline'] + demand_loc_KV['biodiesel'] /
 
         # Step 1. Determine current expenditure on fuels and the proportions of each type
-        total_fuel = demand_kv[BIOGASOLINE] + demand_kv[BIODIESEL] + \
-            demand_kv[MOTORGASOLINE] + demand_kv[GAS_DIESEL_OIL]
-        diesel = (demand_kv[BIODIESEL] + demand_kv[GAS_DIESEL_OIL])
-        petrol = (demand_kv[MOTORGASOLINE] + demand_kv[BIOGASOLINE])
+        total_fuel = local_demand_kv[BIOGASOLINE] + local_demand_kv[BIODIESEL] + \
+            local_demand_kv[MOTORGASOLINE] + local_demand_kv[GAS_DIESEL_OIL]
+        diesel = (local_demand_kv[BIODIESEL] + local_demand_kv[GAS_DIESEL_OIL])
+        petrol = (local_demand_kv[MOTORGASOLINE] + local_demand_kv[BIOGASOLINE])
 
         # Step 1.1 current_biofuels = (demand_kv[BIOGASOLINE] + demand_kv[BIODIESEL]) / total_fuel
 
         # Step 2. Increase the biofuel to the designated amount
-        demand_kv[BIOGASOLINE] = scaler * total_fuel * (petrol / (diesel + petrol))
-        demand_kv[BIODIESEL] = scaler * total_fuel * (diesel / (diesel + petrol))
+        local_demand_kv[BIOGASOLINE] = scaler * total_fuel * (petrol / (diesel + petrol))
+        local_demand_kv[BIODIESEL] = scaler * total_fuel * (diesel / (diesel + petrol))
 
         # Step 3. Decrease the others by the correct amount,
         # taking into account their initial values
@@ -485,19 +518,19 @@ class Consumption:
         # New Value = Remaining_expenditure * Old_proportion
         # (once the previous categories are removed)
         # This can't be more than the total! - TODO: assert?
-        sum_changed = demand_kv[BIOGASOLINE] + demand_kv[BIODIESEL]
+        sum_changed = local_demand_kv[BIOGASOLINE] + local_demand_kv[BIODIESEL]
 
         if sum_changed > total_fuel:
             # TODO: exception
             pass
 
-        demand_kv[MOTORGASOLINE] = (
+        local_demand_kv[MOTORGASOLINE] = (
             total_fuel - sum_changed) * (petrol / (diesel + petrol))
-        demand_kv[GAS_DIESEL_OIL] = (
+        local_demand_kv[GAS_DIESEL_OIL] = (
             total_fuel - sum_changed) * (diesel / (diesel + petrol))
 
 
-    def electric_vehicles(self, scaler):
+    def electric_vehicles(self, local_demand_kv, scaler):
         """
         This is a policy.
 
@@ -532,16 +565,15 @@ class Consumption:
         - demand_kv[electricity] - careful, this means this (these) field is
                                     permanently changed after a call to this method
         """
-        demand_kv = self.demand_kv  # shortcut to work on this field
 
         # Step 1 Assign a proportion of the fuels to be converted and
         # reduce the fuels by the correct amount
 
-        diesel = (demand_kv[BIODIESEL] + demand_kv[GAS_DIESEL_OIL])*scaler
-        petrol = (demand_kv[MOTORGASOLINE] + demand_kv[BIOGASOLINE])*scaler
+        diesel = (local_demand_kv[BIODIESEL] + local_demand_kv[GAS_DIESEL_OIL])*scaler
+        petrol = (local_demand_kv[MOTORGASOLINE] + local_demand_kv[BIOGASOLINE])*scaler
 
         for fuel in FUELS:
-            demand_kv[fuel] = demand_kv[fuel]*(1-scaler)
+            local_demand_kv[fuel] = local_demand_kv[fuel]*(1-scaler)
 
         # Step 2 Turn the amount missing into kWh
         diesel /= FUEL_PRICES_T.loc['Diesel_2020', self.country]
@@ -556,13 +588,13 @@ class Consumption:
 
         # Step 4. Assign this to increased electricity demand
         elec_vehicles = diesel + petrol
-        elec_total = demand_kv[ELECTRICITY_TYPES].sum()
+        elec_total = local_demand_kv[ELECTRICITY_TYPES].sum()
         elec_scaler = (elec_vehicles + elec_total) / elec_total
 
-        demand_kv[ELECTRICITY_TYPES] *= elec_scaler
+        local_demand_kv[ELECTRICITY_TYPES] *= elec_scaler
 
 
-    def eff_improvements(self, scaler):
+    def eff_improvements(self, local_demand_kv, scaler):
         """
         This is a policy.
 
@@ -594,33 +626,31 @@ class Consumption:
         - demand_kv[DISTRICT_SERVICE_LABEL] - not sure if this is a side effect or not
         """
 
-        demand_kv = self.demand_kv  # shortcut to work on this field
-
         # Step 1. This can be done as a single stage.
         # Just reduce the parts that can be reduced by the amount in the scaler
 
         for liquid in LIQUID_TYPES:
-            demand_kv[liquid] = (demand_kv[liquid] * (1 - scaler))
+            local_demand_kv[liquid] = (local_demand_kv[liquid] * (1 - scaler))
 
         for solid in SOLID_TYPES:
-            demand_kv[solid] = (demand_kv[solid] * (1 - scaler))
+            local_demand_kv[solid] = (local_demand_kv[solid] * (1 - scaler))
 
         for gas in GAS_TYPES:
-            demand_kv[gas] = (demand_kv[gas] * (1 - scaler))
+            local_demand_kv[gas] = (local_demand_kv[gas] * (1 - scaler))
 
         for elec in ELECTRICITY_TYPES:
-            elec_hold = demand_kv[elec] * (1 - (self.adjustable_amounts["elec_water"]
+            elec_hold = local_demand_kv[elec] * (1 - (self.adjustable_amounts["elec_water"]
                 + self.adjustable_amounts["elec_heat"]
                 + self.adjustable_amounts["elec_cool"]))  # Parts not related to heating/cooling etc
-            demand_kv[elec] = (demand_kv[elec] * (self.adjustable_amounts["elec_water"]
+            local_demand_kv[elec] = (local_demand_kv[elec] * (self.adjustable_amounts["elec_water"]
                 + self.adjustable_amounts["elec_heat"]
                 + self.adjustable_amounts["elec_cool"]) * (1 - scaler))
-            demand_kv[elec] += elec_hold
+            local_demand_kv[elec] += elec_hold
 
-        demand_kv[DISTRICT_SERVICE_LABEL] *= 1 - scaler
+        local_demand_kv[DISTRICT_SERVICE_LABEL] *= 1 - scaler
 
 
-    def transport_modal_shift(self, scaler, scaler_2, scaler_3):
+    def transport_modal_shift(self, local_demand_kv, scaler, scaler_2, scaler_3):
         """
         This is a policy.
 
@@ -655,21 +685,20 @@ class Consumption:
         - demand_kv <- for all public_transports - careful, this means this field is
           permanently changed after a call to this method
         """
-        demand_kv = self.demand_kv  # shortcut to work on this field
 
         for fuel in FUELS:
-            demand_kv[fuel] *= (1-scaler)
+            local_demand_kv[fuel] *= (1-scaler)
             # In this case, we also assume that there is a reduction on the amount spent on vehicles
             # Change in modal shift takes vehicles off the road?
 
         for vehicle in [MOTOR_VEHICLES, SALE_REPAIR_VEHICLES]:
-            demand_kv[vehicle] *= (1-scaler_3)
+            local_demand_kv[vehicle] *= (1-scaler_3)
 
         for transport in PUBLIC_TRANSPORT:  # Public transport was defined above
-            demand_kv[transport] *= (1+scaler_2)
+            local_demand_kv[transport] *= (1+scaler_2)
 
 
-    def local_generation(self, emission_intensities, scaler, elec_type):
+    def local_generation(self, local_demand_kv, emission_intensities, scaler, elec_type):
         """
         This is a policy.
 
@@ -696,24 +725,23 @@ class Consumption:
         - demand_kv[ELECTRICITY_NEC] - careful, this means this field is permanently
                                         changed after a call to this method
         """
-        demand_kv = self.demand_kv  # shortcut to work on this field
 
-        elec_total = demand_kv[ELECTRICITY_TYPES].sum()
+        elec_total = local_demand_kv[ELECTRICITY_TYPES].sum()
 
         for elec in ELECTRICITY_TYPES:
-            demand_kv[elec] = (demand_kv[elec] * (1 - scaler))
+            local_demand_kv[elec] = (local_demand_kv[elec] * (1 - scaler))
 
         # Assign the remaining amount to the spare category (electricity nec)
-        demand_kv[ELECTRICITY_NEC] = elec_total * scaler
+        local_demand_kv[ELECTRICITY_NEC] = elec_total * scaler
 
         # Set the emission intensity of this based on LCA values
         emission_intensities.loc[self.direct_ab:self.indirect_ab, ELECTRICITY_NEC] = \
             EMISSION_COUNTRIES_LCA_T.loc[self.direct_ab:self.indirect_ab, elec_type]
 
 
-    def local_heating(self, emission_intensities, district_prop, elec_heat_prop,
+    def local_heating(self, local_demand_kv, emission_intensities, district_prop, elec_heat_prop,
                     combustable_fuels_prop, liquids_prop,
-                    gas_prop, solids_prop, district_val):
+                    gas_prop, solids_prop, district_val, total_heat_fuel):
         """
         THIS JUST REPEATS BASELINE QUESTIONS 9 - 10.
         ALLOWING THE USER TO CHANGE THE VALUES
@@ -745,62 +773,67 @@ class Consumption:
           Careful, this means this field is permanently changed after a call to this method
         """
 
-        demand_kv = self.demand_kv  # shortcut to work on this field
+        # total_heat_fuel = (demand_kv[DISTRICT_SERVICE_LABEL]
+        #       + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
+        #       + self.adjustable_amounts["elec_heat"]
+        #       + self.adjustable_amounts["elec_cool"]
+        #     )/self.elec_price + demand_kv[LIQUID_TYPES].sum() \
+        #       + demand_kv[SOLID_TYPES].sum() + demand_kv[GAS_TYPES].sum()
 
         # DISTRICT HEATING
-        demand_kv[DISTRICT_SERVICE_LABEL] = self.total_fuel * district_prop
+        local_demand_kv[DISTRICT_SERVICE_LABEL] = total_heat_fuel * district_prop
 
         # ELECTRICITY
         for elec in ELECTRICITY_TYPES:
             # determine amount of each electricity source in total electricity mix.
-            prop = demand_kv[elec] / self.elec_total
+            prop = local_demand_kv[elec] / self.elec_total
             elec_hold = (1 - (self.adjustable_amounts["elec_water"]
                             + self.adjustable_amounts["elec_heat"]
                             + self.adjustable_amounts["elec_cool"])
-                        ) * demand_kv[elec]  # electricity for appliances
-            # TODO: verify, that local elec_heat_prop works here
+                        ) * local_demand_kv[elec]  # electricity for appliances
             # Scale based on electricity use in heat and elec mix
-            demand_kv[elec] = prop * elec_heat_prop * self.total_fuel / self.elec_price
-            demand_kv[elec] += elec_hold  # Add on the parts to do with appliances
+            local_demand_kv[elec] = prop * elec_heat_prop * total_heat_fuel / self.elec_price
+            local_demand_kv[elec] += elec_hold  # Add on the parts to do with appliances
 
         for liquid in LIQUID_TYPES:
-            liquids_sum = demand_kv[LIQUID_TYPES].sum()
+            liquids_sum = local_demand_kv[LIQUID_TYPES].sum()
             if liquids_sum != 0:
                 # Amount of each liquid in total liquid expenditure
-                prop = demand_kv[liquid] / liquids_sum
-                demand_kv[liquid] = prop * liquids_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                prop = local_demand_kv[liquid] / liquids_sum
+                local_demand_kv[liquid] = prop * liquids_prop * \
+                    combustable_fuels_prop * total_heat_fuel
             else:
-                demand_kv['Kerosene'] = liquids_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                local_demand_kv['Kerosene'] = liquids_prop * \
+                    combustable_fuels_prop * total_heat_fuel
 
         for solid in SOLID_TYPES:
-            solids_sum = demand_kv[SOLID_TYPES].sum()
+            solids_sum = local_demand_kv[SOLID_TYPES].sum()
             if solids_sum != 0:
                 # Amount of each solid in total solid expenditure
-                prop = demand_kv[solid] / solids_sum
-                demand_kv[solid] = prop * solids_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                prop = local_demand_kv[solid] / solids_sum
+                local_demand_kv[solid] = prop * solids_prop * \
+                    combustable_fuels_prop * total_heat_fuel
             else:
-                demand_kv[WOOD_PRODUCTS] = solids_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                local_demand_kv[WOOD_PRODUCTS] = solids_prop * \
+                    combustable_fuels_prop * total_heat_fuel
 
         for gas in GAS_TYPES:
-            gasses_sum = demand_kv[GAS_TYPES].sum()
+            gasses_sum = local_demand_kv[GAS_TYPES].sum()
             if gasses_sum != 0:
                 # Amount of each gas in total gas expenditure
-                prop = demand_kv[gas] / gasses_sum
-                demand_kv[gas] = prop * gas_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                prop = local_demand_kv[gas] / gasses_sum
+                local_demand_kv[gas] = prop * gas_prop * \
+                    combustable_fuels_prop * total_heat_fuel
 
             else:
-                demand_kv[DISTRIBUTION_GAS] = gas_prop * \
-                    combustable_fuels_prop * self.total_fuel
+                local_demand_kv[DISTRIBUTION_GAS] = gas_prop * \
+                    combustable_fuels_prop * total_heat_fuel
 
         # The 'direct_ab' value should be changed to the value the user wants.
         # The user needs to convert the value into kg CO2e / Euro
         # 1.0475 # USER_INPUT
         emission_intensities.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
+
 
 
     def emission_calculation(self,
@@ -818,12 +851,12 @@ class Consumption:
         el_scaler=0,  # U11.2.2 - percentage of coverage
         # U11.3 - Changes in the heating share
         s_heating=False, # U11.3.0 - Consider changes in the heating share?
-        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
-        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
+        electricity_heat_prop=0.0, # U11.3.1 breakdown of heating source 0 -> default
+        combustable_fuels_prop=0.0, # U11.3.1 breakdown of heating source 0 -> default
         district_prop=0, # U11.3.1 - breakdown of heating sources 0 -> default
-        solids_prop=0.0, # U11.3.2a - TODO: no idea
-        liquids_prop=0.0, # U11.3.2b - TODO: no idea
-        gases_prop=0.0, # U11.3.2c - TODO: no idea
+        solids_prop=0.0, # U11.3.2a - breakdown of combustable fuel sources 0 -> default
+        liquids_prop=0.0, # U11.3.2b - breakdown of combustable fuel sources 0 -> default
+        gases_prop=0.0, # U11.3.2c - breakdown of combustable fuel sources 0 -> default
         district_value=0, # U11.3.3 - percentage - direct emissions from district heating
             # when 0, then district_value=
             #   emission_intensities.loc[direct_ab, DISTRICT_SERVICE_LABEL].sum()
@@ -851,6 +884,10 @@ class Consumption:
         self.el_scaler = el_scaler
         district_prop /= 100
         self.district_prop = district_prop
+        electricity_heat_prop /= 100
+        self.electricity_heat_prop = electricity_heat_prop
+        combustable_fuels_prop /= 100
+        self.combustable_fuels_prop = combustable_fuels_prop
         solids_prop /= 100
         self.solids_prop = solids_prop
         liquids_prop /= 100
@@ -868,14 +905,19 @@ class Consumption:
         ms_veh_scaler /= 100
         self.ms_veh_scaler = ms_veh_scaler
 
+        # Define house_size outside of for loop
+        house_size = self.house_size
         if policy_year is None:
             policy_year = self.year
+        self.policy_year = policy_year
 
-        if pop_size_policy is None:
+        if pop_size_policy is None or pop_size_policy < DELTA_ZERO:
             pop_size_policy = self.pop_size
+        self.pop_size_policy = pop_size_policy
 
         # if anything will be modified, this is not a baseline - TODO: check with Peter
-        self.is_baseline = not (eff_gain or local_electricity or s_heating or ev_takeup or modal_shift)
+        self.is_baseline = not (eff_gain or local_electricity or s_heating
+            or ev_takeup or modal_shift)
 
         # Scale factor applied to income - unique value for each decade
         income_scaling = INCOME_PROJ_T.loc[self.country]
@@ -883,25 +925,62 @@ class Consumption:
         # Scale factor applied to household size - unique value for each decade
         house_scaling = HOUSE_SIZE_PROJ_T.loc[self.country]
 
-        if s_heating:
-            demand_kv=self.demand_kv
-            if district_prop < DELTA_ZERO: # if this is close to zero
-                district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / self.total_fuel
-                self.district_prop = district_prop
-                sum_all = (demand_kv[LIQUID_TYPES].sum()
-                        + demand_kv[SOLID_TYPES].sum()
-                        + demand_kv[GAS_TYPES].sum())
-                liquids_prop = demand_kv[LIQUID_TYPES].sum() / sum_all
+#        if s_heating: always compute defaults to show in ui and return
+        demand_kv = self.demand_kv
+
+        total_heat_fuel = (demand_kv[DISTRICT_SERVICE_LABEL]
+            + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
+                + self.adjustable_amounts["elec_heat"]
+                + self.adjustable_amounts["elec_cool"])/self.elec_price
+            + demand_kv[LIQUID_TYPES].sum() + demand_kv[SOLID_TYPES].sum()
+            + demand_kv[GAS_TYPES].sum())
+
+        if (district_prop < DELTA_ZERO
+            and electricity_heat_prop < DELTA_ZERO
+            and combustable_fuels_prop < DELTA_ZERO): # if this is close to zero
+            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel
+            self.district_prop = district_prop
+
+            electricity_heat_prop = (demand_kv[ELECTRICITY_TYPES].sum() *
+                (self.adjustable_amounts["elec_water"]
+                    + self.adjustable_amounts["elec_heat"]
+                    + self.adjustable_amounts["elec_cool"])/self.elec_price) / total_heat_fuel
+
+            combustable_fuels_prop = (demand_kv[LIQUID_TYPES].sum()
+                    + demand_kv[SOLID_TYPES].sum()
+                    + demand_kv[GAS_TYPES].sum()) / total_heat_fuel
+
+            # make sure these are overwritten
+            liquids_prop = 0
+            solids_prop = 0
+            gases_prop = 0
+
+        if liquids_prop < DELTA_ZERO and solids_prop < DELTA_ZERO and gases_prop < DELTA_ZERO:
+            district_prop = demand_kv[DISTRICT_SERVICE_LABEL] / total_heat_fuel
+            sum_all = (demand_kv[LIQUID_TYPES].sum()
+                    + demand_kv[SOLID_TYPES].sum()
+                    + demand_kv[GAS_TYPES].sum())
+            liquids_prop = demand_kv[LIQUID_TYPES].sum() / sum_all
             solids_prop = demand_kv[SOLID_TYPES].sum() / sum_all
             gases_prop = demand_kv[GAS_TYPES].sum() / sum_all
-                # TODO: verify that these are the right defaults
-            if district_value < DELTA_ZERO: # close to zero
-                district_value = \
-                    self.emission_intensities \
-                        .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
-                self.district_value = district_value
-            else:
-                self.district_value = district_value
+
+        # storing values back in object storage
+        self.electricity_heat_prop = electricity_heat_prop
+        self.combustable_fuels_prop = combustable_fuels_prop
+        self.district_prop = district_prop
+        self.liquids_prop = liquids_prop
+        self.solids_prop = solids_prop
+        self.gases_prop = gases_prop
+
+
+        if district_value < DELTA_ZERO: # close to zero
+            district_value = \
+                self.emission_intensities \
+                    .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
+            self.district_value = district_value
+        else:
+            self.district_value = district_value
+
 
         # prepare empty dataframes
         # these are for the graphs
@@ -915,14 +994,21 @@ class Consumption:
                             columns=IW_SECTORS_T.columns)  # Holds area emissions
                                                         # (multiplies by pop_size)
 
-        for year_it in range(self.year, 2051):  # baseline year to 2050 (included)
+        pop_size = self.pop_size # make this default
+
+        local_demand_kv = self.demand_kv.copy()
+        local_emission_intensities = self.emission_intensities.copy()
+        local_use_phase_ab = self.use_phase_ab.copy()
+        local_tail_pipe_ab = self.tail_pipe_ab.copy()
+
+        for year_it in range(2020, 2051):  # baseline year to 2050 (included)
 
             # check the policy part
 
-            # if year_it == 2020:
-            #     income_mult = 1 # This is just for the year 2020
-            #     house_mult = 1  # This is just for the year 2020
-            #     eff_factor = 1  # This is just for the year 2020
+            if year_it == 2020:
+                income_mult = 1 # This is just for the year 2020
+                house_mult = 1  # This is just for the year 2020
+                eff_factor = 1  # This is just for the year 2020
 
             ########### Policies are from here #####################################
             if not self.is_baseline and year_it == policy_year:
@@ -930,37 +1016,39 @@ class Consumption:
                 #demand_kv = demand_kv_policy
                 # house_size_ab = house_size_ab_policy  # Because we are not asking these questions
                 pop_size = pop_size_policy
-
+                self.policy_year = policy_year
                 ############## Household Efficiency ################################
                 if eff_gain:
-                    self.eff_improvements(eff_scaler)
+                    self.eff_improvements(local_demand_kv, eff_scaler)
 
                 ############## Local_Electricity ###################################
                 ####################### U11.2 ######################################
                 if local_electricity:
-                    self.local_generation(self.emission_intensities, el_scaler, el_type)
+                    self.local_generation(local_demand_kv, local_emission_intensities,
+                        el_scaler, el_type)
 
                 if s_heating:
-                    self.local_heating(self.emission_intensities, self.district_prop,
-                        self.electricity_heat_prop, self.combustable_fuels_prop,
+                    self.local_heating(local_demand_kv, local_emission_intensities,
+                        self.district_prop, self.electricity_heat_prop,
+                        self.combustable_fuels_prop,
                         self.liquids_prop, self.gases_prop, self.solids_prop,
-                        self.district_value)
+                        self.district_value, total_heat_fuel)
 
                 ########### Biofuel_in_transport ####################
                 if biofuel_takeup:
                     if bio_scaler < DELTA_ZERO:
                         bio_scaler = 0.5  # default for bio scaler
-                    self.biofuels(bio_scaler)
+                    self.biofuels(local_demand_kv, bio_scaler)
 
                 ######## Electric_Vehicles ##########################
                 ###### U12.2 #############
                 if ev_takeup:
-                    self.electric_vehicles(ev_scaler)
+                    self.electric_vehicles(local_demand_kv, ev_scaler)
 
                 ######### Modal_Shift ############
                 ######### U12.3 #################
                 if modal_shift:
-                    self.transport_modal_shift(
+                    self.transport_modal_shift(local_demand_kv,
                         ms_fuel_scaler, ms_pt_scaler, ms_veh_scaler)
 
             if year_it > 2020 and year_it <= 2030:
@@ -984,41 +1072,43 @@ class Consumption:
                 house_mult = house_scaling['2040-2050']
                 eff_factor = self.eff_scaling
 
-            self.demand_kv *= income_mult
-
-            self.emission_intensities *= eff_factor
-            self.use_phase_ab *= eff_factor
-            self.tail_pipe_ab *= eff_factor
+            local_demand_kv *= income_mult
+            local_emission_intensities *= eff_factor
+            local_use_phase_ab *= eff_factor
+            local_tail_pipe_ab *= eff_factor
 
             # Then we have to recalculate
             # GWP: Global Warming Potential (could be also called Emissions)
 
-            gwp_ab = pd.DataFrame(self.emission_intensities.to_numpy().dot(
-                np.diag(self.demand_kv.to_numpy())))  # This is the basic calculation
-            gwp_ab.index = ['direct', 'indirect']
-            gwp_ab.columns = PRODUCT_COUNT
-            # This adds in the household heating fuel use
-            use_phase_ab_gwp = self.demand_kv * self.use_phase_ab
-            # This adds in the burning of fuel for cars
-            tail_pipe_ab_gwp = self.demand_kv * self.tail_pipe_ab
-            # This puts together in the same table (200 x 1)
-            total_use_ab = tail_pipe_ab_gwp.fillna(0) + use_phase_ab_gwp.fillna(0)
-            # all of the other 200 products are zero
-            # Put together the IO and use phase
-            gwp_ab.loc['Use phase', :] = total_use_ab
+            house_size *= house_mult  # scaling for house size
 
-            #GWP_EE_pc = GWP_EE/House_size_EE
-            # print(year_it)
+            if year_it >= self.year:
+                gwp_ab = pd.DataFrame(local_emission_intensities.to_numpy().dot(
+                np.diag(local_demand_kv.to_numpy())))  # This is the basic calculation
+                gwp_ab.index = ['direct', 'indirect']
+                gwp_ab.columns = PRODUCT_COUNT
+                # This adds in the household heating fuel use
+                use_phase_ab_gwp = local_demand_kv * local_use_phase_ab
+                # This adds in the burning of fuel for cars
+                tail_pipe_ab_gwp = local_demand_kv * local_tail_pipe_ab
+                # This puts together in the same table (200 x 1)
+                total_use_ab = tail_pipe_ab_gwp.fillna(0) + use_phase_ab_gwp.fillna(0)
+                # all of the other 200 products are zero
+                # Put together the IO and use phase
+                gwp_ab.loc['Use phase', :] = total_use_ab
 
-            #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
-            gwp_ab_pc = gwp_ab / (self.house_size * house_mult)
+                #GWP_EE_pc = GWP_EE/House_size_EE
+                # print(year_it)
 
-            # Put the results into sectors
-            df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
-            # self.df_tot.loc[year_it] = gwp_ab_pc.sum()
-            df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
-                gwp_ab_pc.sum().to_numpy()) * self.pop_size
-                # TODO: check which pop_size should be used here? base or policy
+                #GWP_EE = GWP_EE * (eff_factor) * (income_mult)
+
+                gwp_ab_pc = gwp_ab / house_size
+
+                # Put the results into sectors
+                df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
+                # df_tot.loc[year_it] = gwp_ab_pc.sum()
+                df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
+                gwp_ab_pc.sum().to_numpy()) * pop_size
 
         df_main['Total_Emissions'] = df_main.sum(axis=1)
         df_area['Total_Emissions'] = df_area.sum(axis=1)
@@ -1030,6 +1120,8 @@ class Consumption:
 
         if not self.is_baseline:
             building_emissions = 0
+
+            pop_size = self.pop_size_policy # we are using this as abbreviation here
 
             if self.country in NORTH:
                 building_emissions = 350 * new_floor_area/pop_size
@@ -1049,13 +1141,7 @@ class Consumption:
         ###########################################################################################
         # Adding total emissions by multiplying by population
 
-        # F_tot.columns = Exio_products
-        result1 = df_main.copy()
-        # locals()[region + "_Emissions_tot_" + policy_label] = DF_tot.copy()
-
-        # result2 = df_area.copy() - we only return total emissions
-
-        return (result1, df_area['Total_Emissions'])
+        return (df_main.copy(), df_area['Total_Emissions'].copy())
 
         ### end of emission calculation function ###
 
@@ -1073,6 +1159,17 @@ class Consumption:
         # The construction Emissions are now shown here.
 
         df_main, df_total_area_emissions = policy_list[0]
+        # policy_indexes = []
+        # df_policy, df_policy_total_area_emissions = None, 0
+        df_policy = None
+        if len(policy_list) > 1:
+            # df_policy, df_policy_total_area_emissions = policy_list[1]
+            df_policy, _ = policy_list[1]
+            # policy_indexes = [f"p{index}" for index in df_policy.index]
+            # merged_indexes = []
+            # for a,b in zip(df_main.index, policy_indexes):
+            #     merged_indexes.append(a)
+            #     merged_indexes.append(b)
 
         if PLOTTING:
             _, axis = plt.subplots(1, figsize=(15, 10))
@@ -1081,11 +1178,18 @@ class Consumption:
             sectors = list(IW_SECTORS_T.columns)
 
             bottom = len(df_main) * [0]
-            for _, name in enumerate(sectors):
-                plt.bar(df_main.index, df_main[name], bottom=bottom)
-                bottom = bottom + df_main[name]
+            for sector in sectors:
+                if len(policy_list) > 1:
+                    plt.bar(df_policy.index, df_policy[sector], bottom=bottom)
+                    bottom = bottom + df_policy[sector]
+                else: # only baseline
+                    plt.bar(df_main.index, df_main[sector], bottom=bottom)
+                    bottom = bottom + df_main[sector]
 
-            plt.bar(df_main.index, df_main['Total_Emissions'], edgecolor='black', color='none')
+            if len(policy_list) > 1:
+                # plt.bar(df_main.index, df_main['Total_Emissions'],
+                #   edgecolor='black', color='none')
+                df_main['Total_Emissions'].plot(kind='line', color='black', ms=10)
 
             axis.set_title(f"Annual Household Emissions for {self.region}", fontsize=20)
             axis.set_ylabel('Emissions / kG CO2 eq', fontsize=15)
@@ -1093,7 +1197,7 @@ class Consumption:
             axis.set_xlabel('Year', fontsize=15)
             axis.tick_params(axis="x", labelsize=15)
 
-            axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 15})
+            axis.legend(labels, bbox_to_anchor=([1, 1, 0, 0]), ncol=8, prop={'size': 10})
 
             plt.show()  # first graph
 
@@ -1124,7 +1228,7 @@ class Consumption:
             # There should also be an option to remove the total emissions part.
             # (This is basically only useful for new areas.)
 
-            width = 0.2  # TODO: consider calculating this
+            width = 0.2  # TODO: consider calculating this -> later
             spaced = np.arange(len(df_main.columns))
 
             _, axis = plt.subplots(figsize=(15, 10))
@@ -1138,8 +1242,8 @@ class Consumption:
                     label = f"P{counter}"
                 label_list.append(label)
                 axis.bar(
-                    spaced + counter * 1.5 * width, df_main.loc[self.policy_year], 
-                    width, label=label)
+                    spaced + counter * 1.5 * width, df_main.loc[self.policy_year],
+                        width, label=label)
                 counter += 1
 
             # rects1 = axis.bar(
@@ -1226,7 +1330,7 @@ class Consumption:
 
                     plt.plot(dataframe.index, dataframe.Summed_Emissions, )
 
-                    plt.fill_between(dataframe.index, dataframe.Summed_Emissions, 
+                    plt.fill_between(dataframe.index, dataframe.Summed_Emissions,
                         alpha=0.4)  # +counter?
 
                     counter += 0.1
@@ -1245,7 +1349,7 @@ class Consumption:
 
                 axis.legend(label_list, loc='upper left', ncol=2, prop={'size': 15})
 
-                #plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
+                # plt.savefig("Cumulative_example_high_buildphase.jpg",bbox_inches='tight', dpi=300)
 
                 plt.show()
 
@@ -1253,13 +1357,13 @@ class Consumption:
 def testcase_peter_planner():
     """
     Just a test case corresponding to the story.
-    TODO: Several parts of the story are still missing.
     """
     calculation = Consumption(
-        year=2023, # required
+        year=2022, # required
         country="Ireland", # required
         pop_size=195000, # required
         region="Meath County", # optional (else undefined)
+        # local_dataset="Austria: Vienna Test",  # enable for local dataset testing
         #area_type="average",  # U9.4: average*, town, city, rural
         #house_size=0, # U9.3: if 0, picks default
         #income_choice=0, # 0 or 3 means average (3rd_household, 40-60%)
@@ -1276,32 +1380,33 @@ def testcase_peter_planner():
     policy_main, policy_total_area_emissions  = calculation.emission_calculation(
         policy_year=2025,  # U10.1 - the year the policy is implemented
         pop_size_policy=205000,  # U10.2 - new total number of people
-        new_floor_area=50000,  # U10.3 - gross SQM
+        new_floor_area=5000000,#5000000,  # U10.3 - gross SQM
         # U11.1 - Household energy efficiency
-        eff_gain=True,  # U11.1 - consider “Household energy efficiency”?
+        eff_gain = True,  # U11.1 - consider “Household energy efficiency”?
         eff_scaler=10,  # U11.1.1 - percentage energy reduced
         # U11.2 - Local electricity
         local_electricity=True,  # U11.2.0 - consider local electricity
         el_type='Electricity by solar photovoltaic',  # U11.2.1 - source/type
         el_scaler=5,  # U11.2.2 - percentage of coverage
-        s_heating=True,  # U11.3.0 - heating share?
-        district_prop=0,  # U11.3.1 - breakdown of heating sources 0 -> default
-        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
-        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
-        # solids_prop = 0.0 # U11.3.2a - TODO: no idea
-        # liquids_prop = 0.0 # U11.3.2b - TODO: no idea
-        # gases_prop = 0.0 # U11.3.2c - TODO: no idea
+        s_heating=False,  # U11.3.0 - heating share?
+        district_prop=0.0,  # U11.3.1 - breakdown of heating sources 0 -> default
+        electricity_heat_prop = 1.0, # one heating source 0-> default
+        combustable_fuels_prop = 0.0, # one heating source 0-> default
+        # breakdowns of combustable fuels
+        solids_prop = 0.0, # U11.3.2a - one heating source 0-> default
+        liquids_prop = 0.0, # U11.3.2b - one heating source 0-> default
+        gases_prop = 0.0, # U11.3.2c - one heating source 0-> default
         # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
             # - emission_intensities   0.0 #  U11.3.3
         district_value=0,  # U11.3.3 - percentage - direct emissions from district heating
-        biofuel_takeup=True,  # U12.1.0- Consider biofuel in transport?
+        biofuel_takeup=False,  # U12.1.0- Consider biofuel in transport?
         bio_scaler=0,  # 12.1.1 - percentage of transport fuels covered by biofuels
-        ev_takeup=True,  # U12.2.0 - change to electric vehicles
-        ev_scaler=0,  # U12.2.1 - percentage of private vehicles that are electric
+        ev_takeup=False,  # U12.2.0 - change to electric vehicles
+        ev_scaler=100,  # U12.2.1 - percentage of private vehicles that are electric
         modal_shift = True,  # U12.3.0 - Consider transport modal shift?
         ms_fuel_scaler = 4,  # U12.3.1 - percentage of private vehicle use reduction
         ms_veh_scaler = 4,  # U12.3.2 - percentage of private vehicle ownership reduction
-        ms_pt_scaler = 4,  # U12.3.3 - percentage of public transport use increase
+        ms_pt_scaler = -4,  # U12.3.3 - percentage of public transport use increase
         )
     calculation.output_results([(baseline_main, baseline_total_area_emissions),
         (policy_main, policy_total_area_emissions)])
@@ -1313,100 +1418,132 @@ def route_consumption():
     Handle rest call.
     """
     request_body = humps.decamelize(request.json)
+    print("### request_body: ", request_body)
 
     ## Helper functions
     def get(key, default=None):
         return request_body.get(key, default)
-    def geti(key, default=0):
+    def get_int(key, default=0):
         try:
             value = int(request_body.get(key, default))
         except (ValueError, KeyError):
             value = default
         return value
-    def getf(key, default=0.0):
+    def get_float(key, default=0.0):
         try:
             value = float(request_body.get(key, default))
         except (ValueError, KeyError):
             value = default
         return value
-    def getb(key, default=False):
+    def get_bool(key, default=False):
         try:
             value = request_body.get(key, default)
-            if type(value) is not bool:
+            if isinstance(value, bool):
                 value = str(value).lower()
-                value = not (value == "false" or valule == "0")
+                value = not (value == "" or value == "false" or value == "0")
         except (ValueError, KeyError):
             value=default
         return value
- 
+
     calculation = Consumption(
-        geti("year"), # required
+        get_int("year"), # required
         get("country"), # required
-        geti("pop_size"), # required
+        get_int("pop_size"), # required
         region=get("region"), # optional (else undefined)
+        local_dataset=get("local_dataset"), # optional (else undefined), local dataset name
         area_type=get("area_type", "average"),  # U9.4: average*, town, city, rural
-        house_size=getf("house_size", "0"), # U9.3: if 0, picks default
-        income_choice=geti("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
-        eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5: fast, normal*, slow - * is default
-        )
+        house_size=get_float("house_size", "0"), # U9.3: if 0, picks default
+        income_choice=get_int("income_choice", 0), # 0 or 3 means average (3rd_household, 40-60%)
+        eff_scaler_initial=get("eff_scaler_initial", "normal"), # U9.5:
+            # fast, normal*, slow - * is default
+    )
 
     # baseline computation
     baseline_main, baseline_total_area_emissions = calculation.emission_calculation()
-
-#    # print the results (and draw the graph)
-#    calculation.output_results([(baseline_main, baseline_total_area_emissions)])
 
     sectors = list(IW_SECTORS_T.columns)
 
     consumption_response = dict()
     bl_serial = dict()
+    bl_max = 0.0
     for key in sectors:
         bl_serial[key] = dict(baseline_main[key])
+        new_max = baseline_main[key].max()
+        if new_max > bl_max:
+            bl_max = new_max
     consumption_response["BL"] = bl_serial
-    consumption_response["BL_total_emissions"] = dict(baseline_total_area_emissions)
+    consumption_response["BL_max"] = new_max
+    consumption_response["BL_total_emissions"] = dict(baseline_main["Total_Emissions"])
+    consumption_response["BL_total_emissions_max"] = baseline_main["Total_Emissions"].max()
+    consumption_response["BL_total_area_emissions"] = dict(baseline_total_area_emissions)
+    consumption_response["BL_total_area_emissions_max"] = baseline_total_area_emissions.max()
 
     # policy application and computation
-    policy_main, policy_total_area_emissions  = calculation.emission_calculation(
-        policy_year=geti("policy_year", calculation.year),  # U10.1 - the year the policy is implemented
-        pop_size_policy=geti("pop_size_policy"),  # U10.2 - new total number of people
-        new_floor_area=geti("new_floor_area"),  # U10.3 - gross SQM
-        # U11.1 - Household energy efficiency
-        eff_gain=getb("eff_gain"), # U11.1 - consider “Household energy efficiency”?
-        eff_scaler=getf("eff_scaler"),  # U11.1.1 - percentage energy reduced
-        # U11.2 - Local electricity
-        local_electricity=getb("local_electricity"),  # U11.2.0 - consider local electricity
-        el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
-        el_scaler=getf("el_scaler"),  # U11.2.2 - percentage of coverage
-        s_heating=getb("s_heating"),  # U11.3.0 - heating share?
-        district_prop=getf("district_prop", 0),  # U11.3.1 - breakdown of heating sources 0->default
-        # # electricity_heat_prop = 0.75 # TODO: ??? cannot match
-        # # combustable_fuels_prop = 0.25 # TODO: ??? cannot match
-        solids_prop=getf("solids_prop"), # U11.3.2a - TODO: no idea
-        liquids_prop=getf("liquids_prop"), # U11.3.2b - TODO: no idea
-        gases_prop=getf("gases_prop"), # U11.3.2c - TODO: no idea
-        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
-            # - emission_intensities   0.0 #  U11.3.3
-        district_value=getf("district_value"),  # U11.3.3 - percentage 
-                                                # - direct emissions from district heating
-        biofuel_takeup=getb("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
-        bio_scaler=getf("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered by biofuels
-        ev_takeup=getb("ev_takeup"),  # U12.2.0 - change to electric vehicles
-        ev_scaler=getf("ev_scaler"),  # U12.2.1 - percentage of private vehicles that are electric
-        modal_shift=getb("modal_shift"),  # U12.3.0 - Consider transport modal shift?
-        ms_fuel_scaler=getf("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle reduction
-        ms_veh_scaler=getf("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle 
-                                              # ownership reduction
-        ms_pt_scaler=getf("ms_pt_scaler"),  # U12.3.3 - percentage of public transport use increase
-    )
+    policy_main, policy_total_area_emissions  = \
+            calculation.emission_calculation(
+            policy_year=get_int("policy_year", calculation.year),  # U10.1
+                                    # - the year the policy is implemented
+            pop_size_policy=get_int("pop_size_policy"),  # U10.2 - new total number of people
+            new_floor_area=get_int("new_floor_area"),  # U10.3 - gross SQM
+            # U11.1 - Household energy efficiency
+            eff_gain=get_bool("eff_gain"), # U11.1 - consider “Household energy efficiency”?
+            eff_scaler=get_float("eff_scaler"),  # U11.1.1 - percentage energy reduced
+            # U11.2 - Local electricity
+            local_electricity=get_bool("local_electricity"),  # U11.2.0 - consider local electricity
+            el_type=get("el_type", 'Electricity by solar photovoltaic'),  # U11.2.1 - source/type
+            el_scaler=get_float("el_scaler"),  # U11.2.2 - percentage of coverage
+            s_heating=get_bool("s_heating"),  # U11.3.0 - heating share?
+            district_prop=get_float("district_prop", 0),  # U11.3.1
+                # - breakdown of heating sources 0->default
+            electricity_heat_prop=get_float("electricity_heat_prop", 0), # breakdown of heating
+                # sources 0->default
+            combustable_fuels_prop=get_float("combustable_fuels_prop", 0), # breakdown of heating
+                # sources 0->default
+            # the next three are the breakdowns of combustable fuels (and should sum up to 100)
+            solids_prop=get_float("solids_prop"),  # U11.3.2a
+                # - breakdown of heating sources 0->default
+            liquids_prop=get_float("liquids_prop"),  # U11.3.2b
+                # - breakdown of heating sources 0->default
+            gases_prop=get_float("gases_prop"),  # U11.3.2c
+                # - breakdown of heating sources 0->default
+            # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
+                # - emission_intensities   0.0 #  U11.3.3
+            district_value=get_float("district_value"),  # U11.3.3 - percentage
+                # - direct emissions from district heating
+            biofuel_takeup=get_bool("biofuel_takeup"),  # U12.1.0- Consider biofuel in transport?
+            bio_scaler=get_float("bio_scaler"),  # 12.1.1 - percentage of transport fuels covered
+                # by biofuels
+            ev_takeup=get_bool("ev_takeup"),  # U12.2.0 - change to electric vehicles
+            ev_scaler=get_float("ev_scaler"),  # U12.2.1 - percentage of private vehicles
+                # that are electric
+            modal_shift=get_bool("modal_shift"),  # U12.3.0 - Consider transport modal shift?
+            ms_fuel_scaler=get_float("ms_fuel_scaler"),  # U12.3.1 - percentage of private vehicle
+                # reduction
+            ms_veh_scaler=get_float("ms_veh_scaler"),  # U12.3.2 - percentage of private vehicle
+                # ownership reduction
+            ms_pt_scaler=get_float("ms_pt_scaler"),  # U12.3.3 - percentage of public transport
+                # use increase
+        )
 
     if not calculation.is_baseline:
-        policy_serial = dict()
         for key in sectors:
             bl_serial[key] = dict(policy_main[key])
         consumption_response["P1"] = bl_serial
-        consumption_response["P1_total_emissions"] = dict(policy_total_area_emissions)
+        consumption_response["P1_total_emissions"] = dict(policy_main["Total_Emissions"])
+        consumption_response["P1_total_emissions_max"] = policy_main["Total_Emissions"].max()
+        consumption_response["P1_total_area_emissions"] = dict(policy_total_area_emissions)
+        consumption_response["P1_total_area_emissions_max"] = policy_total_area_emissions.max()
 
-    print("consumption_response: ###",consumption_response)
+    # sometimes these defaults are intersting
+    consumption_response["district_prop"] = calculation.district_prop * 100
+    consumption_response["liquids_prop"] = calculation.liquids_prop * 100
+    consumption_response["solids_prop"] = calculation.solids_prop * 100
+    consumption_response["gases_prop"] = calculation.gases_prop * 100
+    consumption_response["combustable_fuels_prop"] = calculation.combustable_fuels_prop * 100
+    consumption_response["electricity_heat_prop"] = calculation.electricity_heat_prop * 100
+    consumption_response["district_value"] = calculation.district_value
+
+    # print("consumption_response: ###", consumption_response)
     return humps.camelize({
         "status": "success",
         "data": {
@@ -1414,8 +1551,22 @@ def route_consumption():
         }
     })
 
-    # Functionality to implement
-    # everything
+
+@blue_print.route("datasets", methods=["GET"])
+def route_datasets():
+    """
+    return the names of vectors of local datasets
+    """
+    datasets = [] 
+    for key in  Y_VECTORS_LOCAL.keys():
+        datasets.append(key)
+
+    return {
+        "status": "success",
+        "data": {
+            "datasets": datasets
+        }
+    }
 
 
 def main():
