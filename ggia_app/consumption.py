@@ -412,9 +412,14 @@ class Consumption:
         # Otherwise,  the user selects the income level of the household (they choose by quintiles)
         if income_choice > len(INCOME_CHOICE_TO_HOUSEHOLD) or income_choice<0:
             income_choice = 0
-        self.income_choice = INCOME_CHOICE_TO_HOUSEHOLD[income_choice]
-        income_scaler = INCOME_SCALING_T.loc[self.income_choice, country] \
-            / INCOME_SCALING_T.loc['Total_household', country]  # USER_INPUT
+        self.income_choice = income_choice
+        if self.income_choice < DELTA_ZERO:
+            income_scaler = 1
+        else:
+            self.income_choice = INCOME_CHOICE_TO_HOUSEHOLD[income_choice]
+            income_scaler = INCOME_SCALING_T.loc[self.income_choice, country] \
+                / INCOME_SCALING_T.loc['Total_household', country]  # USER_INPUT
+
         elasticity = 1  # Random number for now. It should be specific to country and product
                         # TODO: do later
 
