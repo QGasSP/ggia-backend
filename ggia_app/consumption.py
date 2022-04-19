@@ -1144,7 +1144,7 @@ class Consumption:
         ###########################################################################################
         # End of Construction Emissions part!
         ###########################################################################################
-        # Adding total emissions by multiplying by population
+        # Adding total emissions by multiplying by population <- TODO: where is this?
 
         return (df_main.copy(), df_area['Total_Emissions'].copy())
 
@@ -1530,7 +1530,7 @@ def route_consumption():
                 # use increase
         )
 
-    if not calculation.is_baseline:
+    if not calculation.is_baseline:  # more than baseline
         for key in sectors:
             bl_serial[key] = dict(policy_main[key])
         consumption_response["P1"] = bl_serial
@@ -1538,6 +1538,24 @@ def route_consumption():
         consumption_response["P1_total_emissions_max"] = policy_main["Total_Emissions"].max()
         consumption_response["P1_total_area_emissions"] = dict(policy_total_area_emissions)
         consumption_response["P1_total_area_emissions_max"] = policy_total_area_emissions.max()
+
+        # also the summed emissions are needed
+        counter = 0
+        for df_main_tmp, abbr in [(baseline_main, "BL"), (policy_main, "P1")]:
+            # Describe Emissions over time
+            policy_summed = pd.DataFrame(np.zeros((30, 1)),
+                            index=list(range(2020, 2050)), columns=["Summed_Emissions"])
+            policy_summed.loc[2020, "Summed_Emissions"] = \
+                df_main_tmp.loc[2020, 'Total_Emissions']
+
+            years = list(range(2020, 2050))
+            for year in years:
+                policy_summed.loc[year+1, "Summed_Emissions"] = (
+                    policy_summed.loc[year, "Summed_Emissions"]
+                    + df_main_tmp.loc[year+1, 'Total_Emissions'])
+        
+            consumption_response[f"{abbr}_Summed_Emissions"] = dict(policy_summed.Summed_Emissions)
+
 
     # sometimes these defaults are intersting
     consumption_response["district_prop"] = calculation.district_prop * 100
