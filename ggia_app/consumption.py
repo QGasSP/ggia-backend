@@ -1553,7 +1553,7 @@ def route_consumption():
                 policy_summed.loc[year+1, "Summed_Emissions"] = (
                     policy_summed.loc[year, "Summed_Emissions"]
                     + df_main_tmp.loc[year+1, 'Total_Emissions'])
-        
+
             consumption_response[f"{abbr}_Summed_Emissions"] = dict(policy_summed.Summed_Emissions)
 
 
