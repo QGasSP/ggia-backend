@@ -1248,7 +1248,7 @@ class Consumption:
                 label_list.append(label)
                 axis.bar(
                     spaced + counter * 1.5 * width, df_main.loc[self.policy_year],
-                        width, label=label)
+                        width, label=label) # TODO: check if front-end uses df_main.loc
                 counter += 1
 
             # rects1 = axis.bar(
@@ -1339,6 +1339,8 @@ class Consumption:
                         alpha=0.4)  # +counter?
 
                     counter += 0.1
+
+                    print("Summed emissions:", dataframe.Summed_Emissions)
 
                 #x = np.arange(len(Ireland_Emissions.index))
                 #width = 0.8
@@ -1531,16 +1533,16 @@ def route_consumption():
         )
 
     if not calculation.is_baseline:  # more than baseline
+        p1_serial = dict()
         for key in sectors:
-            bl_serial[key] = dict(policy_main[key])
-        consumption_response["P1"] = bl_serial
+            p1_serial[key] = dict(policy_main[key])
+        consumption_response["P1"] = p1_serial
         consumption_response["P1_total_emissions"] = dict(policy_main["Total_Emissions"])
         consumption_response["P1_total_emissions_max"] = policy_main["Total_Emissions"].max()
         consumption_response["P1_total_area_emissions"] = dict(policy_total_area_emissions)
         consumption_response["P1_total_area_emissions_max"] = policy_total_area_emissions.max()
 
         # also the summed emissions are needed
-        counter = 0
         for df_main_tmp, abbr in [(baseline_main, "BL"), (policy_main, "P1")]:
             # Describe Emissions over time
             policy_summed = pd.DataFrame(np.zeros((30, 1)),
@@ -1553,6 +1555,8 @@ def route_consumption():
                 policy_summed.loc[year+1, "Summed_Emissions"] = (
                     policy_summed.loc[year, "Summed_Emissions"]
                     + df_main_tmp.loc[year+1, 'Total_Emissions'])
+
+            # print(f"Summed emissions of {abbr}:", policy_summed.Summed_Emissions)  only for debugging
 
             consumption_response[f"{abbr}_Summed_Emissions"] = dict(policy_summed.Summed_Emissions)
 
