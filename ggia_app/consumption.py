@@ -223,7 +223,7 @@ COUNTRY_ABBREVIATIONS = {
     'Denmark': 'DK',
     'Estonia': 'EE',
     'France': 'FR',
-    'Finland': 'FE',
+    'Finland': 'FI',
     'Germany': 'DE',
     'Greece': 'GR',
     'Hungary': 'HU',
@@ -992,8 +992,8 @@ class Consumption:
         df_main = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
                         columns=IW_SECTORS_T.columns)  # Holds final data in sectors 7 (+ sum)
 
-        # df_tot = pd.DataFrame(np.zeros((30, 200)), index=list(range(2020, 2050)),
-        #                     columns=PRODUCT_COUNT)  # holds final data in products (200)
+        df_tot = pd.DataFrame(np.zeros((30, 200)), index=list(range(2020, 2050)),
+                             columns=PRODUCT_COUNT)  # holds final data in products (200)
 
         df_area = pd.DataFrame(np.zeros((30, 8)), index=list(range(2020, 2050)),
                             columns=IW_SECTORS_T.columns)  # Holds area emissions
@@ -1111,7 +1111,7 @@ class Consumption:
 
                 # Put the results into sectors
                 df_main.loc[year_it] = IW_SECTORS_NP_TR_T.dot(gwp_ab_pc.sum().to_numpy())
-                # df_tot.loc[year_it] = gwp_ab_pc.sum()
+                df_tot.loc[year_it] = gwp_ab_pc.sum()
                 df_area.loc[year_it] = IW_SECTORS_NP_TR_T.dot(
                 gwp_ab_pc.sum().to_numpy()) * pop_size
 
@@ -1419,6 +1419,61 @@ def testcase_peter_planner():
         (policy_main, policy_total_area_emissions)])
 
 
+def testcase_finland():
+    """
+    Another test case for Finland.
+    """
+    calculation = Consumption(
+        year=2020,
+        country="Finland",
+        pop_size=174167,
+        region="Kymenlaakso",
+        area_type="average",
+        house_size=2.02,
+        )
+
+    # baseline computation
+    baseline_main, baseline_total_area_emissions = calculation.emission_calculation()
+
+    # print the results (and draw the graph)
+    calculation.output_results([(baseline_main, baseline_total_area_emissions)])
+
+    # policy application and computation
+    policy_main, policy_total_area_emissions  = calculation.emission_calculation(
+        policy_year=2026,  # U10.1 - the year the policy is implemented
+        pop_size_policy=174167,  # U10.2 - new total number of people
+        new_floor_area=5000000, #5000000,  # U10.3 - gross SQM
+        # U11.1 - Household energy efficiency
+        eff_gain = True,  # U11.1 - consider “Household energy efficiency”?
+        eff_scaler=20,  # U11.1.1 - percentage energy reduced
+        # U11.2 - Local electricity
+        local_electricity=False,  # U11.2.0 - consider local electricity
+        el_type='Electricity by solar photovoltaic',  # U11.2.1 - source/type
+        el_scaler=5,  # U11.2.2 - percentage of coverage
+        s_heating=True,  # U11.3.0 - heating share?
+        district_prop=9.8354215,  # U11.3.1 - breakdown of heating sources 0 -> default
+        electricity_heat_prop = 79.6750966, # one heating source 0-> default
+        combustable_fuels_prop = 10.489482, # one heating source 0-> default
+        # breakdowns of combustable fuels
+        solids_prop = 0.0, # U11.3.2a - one heating source 0-> default
+        liquids_prop = 100.0, # U11.3.2b - one heating source 0-> default
+        gases_prop = 0.0, # U11.3.2c - one heating source 0-> default
+        # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
+            # - emission_intensities   0.0 #  U11.3.3
+        district_value=0,  # U11.3.3 - percentage - direct emissions from district heating
+        biofuel_takeup=False,  # U12.1.0- Consider biofuel in transport?
+        bio_scaler=0,  # 12.1.1 - percentage of transport fuels covered by biofuels
+        ev_takeup=False,  # U12.2.0 - change to electric vehicles
+        ev_scaler=100,  # U12.2.1 - percentage of private vehicles that are electric
+        modal_shift = False,  # U12.3.0 - Consider transport modal shift?
+        ms_fuel_scaler = 4,  # U12.3.1 - percentage of private vehicle use reduction
+        ms_veh_scaler = 4,  # U12.3.2 - percentage of private vehicle ownership reduction
+        ms_pt_scaler = -4,  # U12.3.3 - percentage of public transport use increase
+        )
+    calculation.output_results([(baseline_main, baseline_total_area_emissions),
+        (policy_main, policy_total_area_emissions)])
+
+
 @blue_print.route("", methods=["GET", "POST"])
 def route_consumption():
     """
@@ -1600,7 +1655,8 @@ def main():
     """
     Simple main that can run a test.
     """
-    testcase_peter_planner()
+#    testcase_peter_planner()
+    testcase_finland()
 
 
 if __name__ == "__main__":
