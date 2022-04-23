@@ -789,9 +789,10 @@ class Consumption:
         local_demand_kv[DISTRICT_SERVICE_LABEL] = total_heat_fuel * district_prop
 
         # ELECTRICITY
+        elec_total = local_demand_kv[ELECTRICITY_TYPES].sum()
         for elec in ELECTRICITY_TYPES:
             # determine amount of each electricity source in total electricity mix.
-            prop = local_demand_kv[elec] / self.elec_total
+            prop = local_demand_kv[elec] / elec_total
             elec_hold = (1 - (self.adjustable_amounts["elec_water"]
                             + self.adjustable_amounts["elec_heat"]
                             + self.adjustable_amounts["elec_cool"])
@@ -837,7 +838,8 @@ class Consumption:
         # The 'direct_ab' value should be changed to the value the user wants.
         # The user needs to convert the value into kg CO2e / Euro
         # 1.0475 # USER_INPUT
-        emission_intensities.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
+        if district_val > DELTA_ZERO:
+            emission_intensities.loc[self.direct_ab, DISTRICT_SERVICE_LABEL] = district_val
 
 
 
@@ -936,7 +938,7 @@ class Consumption:
         total_heat_fuel = (demand_kv[DISTRICT_SERVICE_LABEL]
             + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
                 + self.adjustable_amounts["elec_heat"]
-                + self.adjustable_amounts["elec_cool"])/self.elec_price
+                + self.adjustable_amounts["elec_cool"]) * self.elec_price
             + demand_kv[LIQUID_TYPES].sum() + demand_kv[SOLID_TYPES].sum()
             + demand_kv[GAS_TYPES].sum())
 
@@ -949,7 +951,7 @@ class Consumption:
             electricity_heat_prop = (demand_kv[ELECTRICITY_TYPES].sum() *
                 (self.adjustable_amounts["elec_water"]
                     + self.adjustable_amounts["elec_heat"]
-                    + self.adjustable_amounts["elec_cool"])/self.elec_price) / total_heat_fuel
+                    + self.adjustable_amounts["elec_cool"]) * self.elec_price) / total_heat_fuel
 
             combustable_fuels_prop = (demand_kv[LIQUID_TYPES].sum()
                     + demand_kv[SOLID_TYPES].sum()
@@ -1117,6 +1119,7 @@ class Consumption:
 
         df_main['Total_Emissions'] = df_main.sum(axis=1)
         df_area['Total_Emissions'] = df_area.sum(axis=1)
+        print("### DF tot", df_tot[DISTRICT_SERVICE_LABEL])
 
 
         ###########################################################################################
@@ -1452,8 +1455,8 @@ def testcase_finland():
         el_scaler=5,  # U11.2.2 - percentage of coverage
         s_heating=True,  # U11.3.0 - heating share?
         district_prop=9.8354215,  # U11.3.1 - breakdown of heating sources 0 -> default
-        electricity_heat_prop = 79.6750966, # one heating source 0-> default
-        combustable_fuels_prop = 10.489482, # one heating source 0-> default
+        electricity_heat_prop=79.6750966, # one heating source 0-> default
+        combustable_fuels_prop=10.489482, # one heating source 0-> default
         # breakdowns of combustable fuels
         solids_prop = 0.0, # U11.3.2a - one heating source 0-> default
         liquids_prop = 100.0, # U11.3.2b - one heating source 0-> default
