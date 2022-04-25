@@ -13,5 +13,6 @@ docker-compose up -d
 If you want to test the project, you need to install the dependencies in `requirements.txt` and run the application with the following commands:
 ```shell
 pip install -r requirements.txt
-python app.py
+FLASK_ENV=development python app.py
+# python app.py
 ```

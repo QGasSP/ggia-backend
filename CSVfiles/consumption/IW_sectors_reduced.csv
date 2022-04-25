@@ -1,0 +1,201 @@
+,Housing_Energy,Housing_Other,Transport_Fuels,Transport_Other,Air_travel,Food,Tangible_goods,Services
+Paddy rice,0,0,0,0,0,1,0,0.0
+Wheat,0,0,0,0,0,1,0,0.0
+Cereal grains nec,0,0,0,0,0,1,0,0.0
+"Vegetables, fruit, nuts",0,0,0,0,0,1,0,0.0
+Oil seeds,0,0,0,0,0,1,0,0.0
+"Sugar cane, sugar beet",0,0,0,0,0,0,0,1.0
+Plant-based fibers,0,0,0,0,0,1,0,0.0
+Crops nec,0,0,0,0,0,1,0,0.0
+Cattle,0,0,0,0,0,0,0,1.0
+Pigs,0,0,0,0,0,0,0,1.0
+Poultry,0,0,0,0,0,1,0,0.0
+Meat animals nec,0,0,0,0,0,1,0,0.0
+Animal products nec,0,0,0,0,0,1,0,0.0
+Raw milk,0,0,0,0,0,1,0,0.0
+"Wool, silk-worm cocoons",0,0,0,0,0,0,0,1.0
+Manure (conventional treatment),0,0,0,0,0,0,0,1.0
+Manure (biogas treatment),0,0,0,0,0,0,0,1.0
+"Products of forestry, logging and related services (02)",1,0,0,0,0,0,0,0.0
+Fish and other fishing products; services incidental of fishing (05),0,0,0,0,0,1,0,0.0
+Anthracite,1,0,0,0,0,0,0,0.0
+Coking Coal,1,0,0,0,0,0,0,0.0
+Other Bituminous Coal,1,0,0,0,0,0,0,0.0
+Sub-Bituminous Coal,1,0,0,0,0,0,0,0.0
+Patent Fuel,1,0,0,0,0,0,0,0.0
+Lignite/Brown Coal,1,0,0,0,0,0,0,0.0
+BKB/Peat Briquettes,1,0,0,0,0,0,0,0.0
+Peat,1,0,0,0,0,0,0,0.0
+"Crude petroleum and services related to crude oil extraction, excluding surveying",0,0,0,0,0,0,0,1.0
+"Natural gas and services related to natural gas extraction, excluding surveying",1,0,0,0,0,0,0,0.0
+Natural Gas Liquids,1,0,0,0,0,0,0,0.0
+Other Hydrocarbons,0,0,0,0,0,0,0,1.0
+Uranium and thorium ores (12),0,0,0,0,0,0,0,1.0
+Iron ores,0,0,0,0,0,0,0,1.0
+Copper ores and concentrates,0,0,0,0,0,0,0,1.0
+Nickel ores and concentrates,0,0,0,0,0,0,0,1.0
+Aluminium ores and concentrates,0,0,0,0,0,0,0,1.0
+Precious metal ores and concentrates,0,0,0,0,0,0,0,1.0
+"Lead, zinc and tin ores and concentrates",0,0,0,0,0,0,0,1.0
+Other non-ferrous metal ores and concentrates,0,0,0,0,0,0,0,1.0
+Stone,0,0,0,0,0,0,0,1.0
+Sand and clay,0,1,0,0,0,0,0,0.0
+"Chemical and fertilizer minerals, salt and other mining and quarrying products n.e.c.",0,1,0,0,0,0,0,0.0
+Products of meat cattle,0,0,0,0,0,1,0,0.0
+Products of meat pigs,0,0,0,0,0,1,0,0.0
+Products of meat poultry,0,0,0,0,0,1,0,0.0
+Meat products nec,0,0,0,0,0,1,0,0.0
+products of Vegetable oils and fats,0,0,0,0,0,1,0,0.0
+Dairy products,0,0,0,0,0,1,0,0.0
+Processed rice,0,0,0,0,0,1,0,0.0
+Sugar,0,0,0,0,0,1,0,0.0
+Food products nec,0,0,0,0,0,1,0,0.0
+Beverages,0,0,0,0,0,1,0,0.0
+Fish products,0,0,0,0,0,1,0,0.0
+Tobacco products (16),0,0,0,0,0,1,0,0.0
+Textiles (17),0,0,0,0,0,0,1,0.0
+Wearing apparel; furs (18),0,0,0,0,0,0,1,0.0
+Leather and leather products (19),0,0,0,0,0,0,1,0.0
+Wood and products of wood and cork (except furniture); articles of straw and plaiting materials (20),1,0,0,0,0,0,0,0.0
+"Wood material for treatment, Re-processing of secondary wood material into new wood material",0,0,0,0,0,0,0,1.0
+Pulp,0,0,0,0,0,0,0,1.0
+"Secondary paper for treatment, Re-processing of secondary paper into new pulp",0,0,0,0,0,0,0,1.0
+Paper and paper products,0,0,0,0,0,0,1,0.0
+Printed matter and recorded media (22),0,0,0,0,0,0,1,0.0
+Coke Oven Coke,1,0,0,0,0,0,0,0.0
+Gas Coke,0,0,0,0,0,0,0,1.0
+Coal Tar,1,0,0,0,0,0,0,0.0
+Motor Gasoline,0,0,1,0,0,0,0,0.0
+Aviation Gasoline,0,0,0,0,1,0,0,0.0
+Gasoline Type Jet Fuel,0,0,0,0,1,0,0,0.0
+Kerosene Type Jet Fuel,0,0,0,0,1,0,0,0.0
+Kerosene,1,0,0,0,0,0,0,0.0
+Gas/Diesel Oil,0,0,1,0,0,0,0,0.0
+Heavy Fuel Oil,1,0,0,0,0,0,0,0.0
+Refinery Gas,1,0,0,0,0,0,0,0.0
+Liquefied Petroleum Gases (LPG),1,0,0,0,0,0,0,0.0
+Refinery Feedstocks,1,0,0,0,0,0,0,0.0
+Ethane,1,0,0,0,0,0,0,0.0
+Naphtha,1,0,0,0,0,0,0,0.0
+White Spirit & SBP,0,0,0,0,0,0,1,0.0
+Lubricants,1,0,0,0,0,0,0,0.0
+Bitumen,1,0,0,0,0,0,0,0.0
+Paraffin Waxes,1,0,0,0,0,0,0,0.0
+Petroleum Coke,1,0,0,0,0,0,0,0.0
+Non-specified Petroleum Products,0,0,0,0,0,0,1,0.0
+Nuclear fuel,0,0,0,0,0,0,0,1.0
+"Plastics, basic",0,0,0,0,0,0,0,1.0
+"Secondary plastic for treatment, Re-processing of secondary plastic into new plastic",0,0,0,0,0,0,0,1.0
+N-fertiliser,0,0,0,0,0,0,1,0.0
+P- and other fertiliser,0,0,0,0,0,0,1,0.0
+Chemicals nec,0,0,0,0,0,0,1,0.0
+Charcoal,1,0,0,0,0,0,0,0.0
+Additives/Blending Components,0,0,1,0,0,0,0,0.0
+Biogasoline,0,0,1,0,0,0,0,0.0
+Biodiesels,0,0,1,0,0,0,0,0.0
+Other Liquid Biofuels,1,0,0,0,0,0,0,0.0
+Rubber and plastic products (25),0,0,0,0,0,0,1,0.0
+Glass and glass products,0,0,0,0,0,0,0,1.0
+"Secondary glass for treatment, Re-processing of secondary glass into new glass",0,0,0,0,0,0,0,1.0
+Ceramic goods,0,1,0,0,0,0,0,0.0
+"Bricks, tiles and construction products, in baked clay",0,1,0,0,0,0,0,0.0
+"Cement, lime and plaster",0,1,0,0,0,0,0,0.0
+"Ash for treatment, Re-processing of ash into clinker",0,0,0,0,0,0,0,1.0
+Other non-metallic mineral products,0,1,0,0,0,0,0,0.0
+Basic iron and steel and of ferro-alloys and first products thereof,0,1,0,0,0,0,0,0.0
+"Secondary steel for treatment, Re-processing of secondary steel into new steel",0,0,0,0,0,0,0,1.0
+Precious metals,0,0,0,0,0,0,1,0.0
+"Secondary preciuos metals for treatment, Re-processing of secondary preciuos metals into new preciuos metals",0,0,0,0,0,0,0,1.0
+Aluminium and aluminium products,0,0,0,0,0,0,1,0.0
+"Secondary aluminium for treatment, Re-processing of secondary aluminium into new aluminium",0,0,0,0,0,0,0,1.0
+"Lead, zinc and tin and products thereof",0,0,0,0,0,0,0,1.0
+"Secondary lead for treatment, Re-processing of secondary lead into new lead",0,0,0,0,0,0,0,1.0
+Copper products,0,0,0,0,0,0,0,1.0
+"Secondary copper for treatment, Re-processing of secondary copper into new copper",0,0,0,0,0,0,0,1.0
+Other non-ferrous metal products,0,1,0,0,0,0,0,0.0
+"Secondary other non-ferrous metals for treatment, Re-processing of secondary other non-ferrous metals into new other non-ferrous metals",0,0,0,0,0,0,0,1.0
+Foundry work services,0,1,0,0,0,0,0,0.0
+"Fabricated metal products, except machinery and equipment (28)",0,0,0,0,0,0,1,0.0
+Machinery and equipment n.e.c. (29),0,0,0,0,0,0,1,0.0
+Office machinery and computers (30),0,0,0,0,0,0,1,0.0
+Electrical machinery and apparatus n.e.c. (31),0,0,0,0,0,0,1,0.0
+"Radio, television and communication equipment and apparatus (32)",0,0,0,0,0,0,1,0.0
+"Medical, precision and optical instruments, watches and clocks (33)",0,0,0,0,0,0,1,0.0
+"Motor vehicles, trailers and semi-trailers (34)",0,0,0,1,0,0,0,0.0
+Other transport equipment (35),0,0,0,1,0,0,0,0.0
+Furniture; other manufactured goods n.e.c. (36),0,0,0,0,0,0,1,0.0
+Secondary raw materials,0,1,0,0,0,0,0,0.0
+"Bottles for treatment, Recycling of bottles by direct reuse",0,0,0,0,0,0,0,1.0
+Electricity by coal,1,0,0,0,0,0,0,0.0
+Electricity by gas,1,0,0,0,0,0,0,0.0
+Electricity by nuclear,1,0,0,0,0,0,0,0.0
+Electricity by hydro,1,0,0,0,0,0,0,0.0
+Electricity by wind,1,0,0,0,0,0,0,0.0
+Electricity by petroleum and other oil derivatives,1,0,0,0,0,0,0,0.0
+Electricity by biomass and waste,1,0,0,0,0,0,0,0.0
+Electricity by solar photovoltaic,1,0,0,0,0,0,0,0.0
+Electricity by solar thermal,1,0,0,0,0,0,0,0.0
+"Electricity by tide, wave, ocean",1,0,0,0,0,0,0,0.0
+Electricity by Geothermal,1,0,0,0,0,0,0,0.0
+Electricity nec,1,0,0,0,0,0,0,0.0
+Transmission services of electricity,1,0,0,0,0,0,0,0.0
+Distribution and trade services of electricity,1,0,0,0,0,0,0,0.0
+Coke oven gas,1,0,0,0,0,0,0,0.0
+Blast Furnace Gas,1,0,0,0,0,0,0,0.0
+Oxygen Steel Furnace Gas,0,0,0,0,0,0,0,1.0
+Gas Works Gas,1,0,0,0,0,0,0,0.0
+Biogas,1,0,0,0,0,0,0,0.0
+Distribution services of gaseous fuels through mains,1,0,0,0,0,0,0,0.0
+Steam and hot water supply services,1,0,0,0,0,0,0,0.0
+"Collected and purified water, distribution services of water (41)",0,1,0,0,0,0,0,0.0
+Construction work (45),0,1,0,0,0,0,0,0.0
+"Secondary construction material for treatment, Re-processing of secondary construction material into aggregates",0,0,0,0,0,0,0,1.0
+"Sale, maintenance, repair of motor vehicles, motor vehicles parts, motorcycles, motor cycles parts and accessoiries",0,0,0,1,0,0,0,0.0
+Retail trade services of motor fuel,0,0,1,0,0,0,0,0.0
+"Wholesale trade and commission trade services, except of motor vehicles and motorcycles (51)",0,0,0,0,0,0,0,1.0
+"Retail  trade services, except of motor vehicles and motorcycles; repair services of personal and household goods (52)",0,0,0,0,0,0,0,1.0
+Hotel and restaurant services (55),0,0,0,0,0,0,0,1.0
+Railway transportation services,0,0,0,1,0,0,0,0.0
+Other land transportation services,0,0,0,1,0,0,0,0.0
+Transportation services via pipelines,0,0,0,0,0,0,0,1.0
+Sea and coastal water transportation services,0,0,0,1,0,0,0,0.0
+Inland water transportation services,0,0,0,1,0,0,0,0.0
+Air transport services (62),0,0,0,0,1,0,0,0.0
+Supporting and auxiliary transport services; travel agency services (63),0,0,0,0,1,0,0,0.0
+Post and telecommunication services (64),0,0,0,0,0,0,0,1.0
+"Financial intermediation services, except insurance and pension funding services (65)",0,0,0,0,0,0,0,1.0
+"Insurance and pension funding services, except compulsory social security services (66)",0,0,0,0,0,0,0,1.0
+Services auxiliary to financial intermediation (67),0,0,0,0,0,0,0,1.0
+Real estate services (70),0,1,0,0,0,0,0,0.0
+Renting services of machinery and equipment without operator and of personal and household goods (71),0,0,0,0,0,0,0,1.0
+Computer and related services (72),0,0,0,0,0,0,0,1.0
+Research and development services (73),0,0,0,0,0,0,0,1.0
+Other business services (74),0,0,0,0,0,0,0,1.0
+Public administration and defence services; compulsory social security services (75),0,0,0,0,0,0,0,1.0
+Education services (80),0,0,0,0,0,0,0,1.0
+Health and social work services (85),0,0,0,0,0,0,0,1.0
+Food waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Paper waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Plastic waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Intert/metal waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Textiles waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Wood waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Oil/hazardous waste for treatment: incineration,0,1,0,0,0,0,0,0.0
+Food waste for treatment: biogasification and land application,0,1,0,0,0,0,0,0.0
+Paper waste for treatment: biogasification and land application,0,1,0,0,0,0,0,0.0
+Sewage sludge for treatment: biogasification and land application,0,1,0,0,0,0,0,0.0
+Food waste for treatment: composting and land application,0,1,0,0,0,0,0,0.0
+Paper and wood waste for treatment: composting and land application,0,1,0,0,0,0,0,0.0
+Food waste for treatment: waste water treatment,0,1,0,0,0,0,0,0.0
+Other waste for treatment: waste water treatment,0,1,0,0,0,0,0,0.0
+Food waste for treatment: landfill,0,1,0,0,0,0,0,0.0
+Paper for treatment: landfill,0,1,0,0,0,0,0,0.0
+Plastic waste for treatment: landfill,0,1,0,0,0,0,0,0.0
+Inert/metal/hazardous waste for treatment: landfill,0,1,0,0,0,0,0,0.0
+Textiles waste for treatment: landfill,0,1,0,0,0,0,0,0.0
+Wood waste for treatment: landfill,0,1,0,0,0,0,0,0.0
+Membership organisation services n.e.c. (91),0,0,0,0,0,0,0,1.0
+"Recreational, cultural and sporting services (92)",0,0,0,0,0,0,0,1.0
+Other services (93),0,0,0,0,0,0,0,1.0
+Private households with employed persons (95),0,0,0,0,0,0,0,1.0
+Extra-territorial organizations and bodies,0,0,0,0,0,0,0,1.0

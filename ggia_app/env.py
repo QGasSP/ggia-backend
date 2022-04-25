@@ -85,41 +85,113 @@ LAND_USE_CHANGE_FACTOR_NAMES = {
     "organic_soil": "organic"
 }
 
+YEARS_21_TO_30_DICT = {
+    "forestland_remaining_forestland": [
+        "cropland_to_forestland",
+        'grassland_to_forestland',
+        'otherland_to_forestland',
+        'settlement_to_forestland',
+        'wetland_to_forestland',
+    ],
+    "cropland_remaining_cropland": [
+        'forestland_to_cropland',
+        'grassland_to_cropland',
+        'otherland_to_cropland',
+        'settlement_to_cropland',
+        'wetland_to_cropland'
+    ],
+    "grassland_remaining_grassland": [
+        'cropland_to_grassland',
+        'forestland_to_grassland',
+        'otherland_to_grassland',
+        'settlement_to_grassland',
+        'wetland_to_grassland'
+    ],
+    "peat_extraction_remaining_peat_extraction": [ # may need to swap
+        'cropland_to_otherland',
+        'forestland_to_otherland',
+        'grassland_to_otherland',
+        'settlement_to_otherland',
+        'wetland_to_otherland',
+    ],
+    "wetland_remaining_wetland": [ # may need to swap
+        'land_to_peat_extraction',
+        'peatland_restoration',
+        'cropland_to_wetland',
+        'forestland_to_wetland',
+        'grassland_to_wetland',
+    ],
+    "settlement_remaining_settlement": [
+        'cropland_to_settlement',
+        'forestland_to_settlement',
+        'grassland_to_settlement',
+        'otherland_to_settlement',
+        'wetland_to_settlement'
+    ]
+}
+
 LAND_TYPES_LIST = [
-    "cropland_to_forestland",
-    "cropland_to_grassland",
-    "cropland_to_otherland",
-    "cropland_to_settlement",
-    "cropland_to_wetland",
-    "forestland_to_cropland",
-    "forestland_to_grassland",
-    "forestland_to_otherland",
-    "forestland_to_settlement",
-    "forestland_to_wetland",
-    "grassland_to_cropland",
-    "grassland_to_forestland",
-    "grassland_to_otherland",
-    "grassland_to_settlement",
-    "grassland_to_wetland",
-    "land_to_peat_extraction",
-    "otherland_to_cropland",
-    "otherland_to_forestland",
-    "otherland_to_grassland",
-    "otherland_to_settlement",
-    "peatland_restoration",
-    "settlement_to_cropland",
-    "settlement_to_forestland",
-    "settlement_to_grassland",
-    "settlement_to_otherland",
-    "wetland_to_cropland",
-    "wetland_to_forestland",
-    "wetland_to_grassland",
-    "wetland_to_otherland",
-    "wetland_to_settlement"]
-    # ,
-    # "forestland_remaining_forestland",
-    # "cropland_remaining_cropland",
-    # "grassland_remaining_grassland",
-    # "peat_extraction_remaining_peat_extraction",
-    # "wetlands_remaining_wetlands (general)",
-    # "settlements_remaining_settlements"]
+    'cropland_to_forestland',
+    'cropland_to_grassland',
+    'cropland_to_otherland',
+    'cropland_to_settlement',
+    'cropland_to_wetland',
+    'forestland_to_cropland',
+    'forestland_to_grassland',
+    'forestland_to_otherland',
+    'forestland_to_settlement',
+    'forestland_to_wetland',
+    'grassland_to_cropland',
+    'grassland_to_forestland',
+    'grassland_to_otherland',
+    'grassland_to_settlement',
+    'grassland_to_wetland',
+    'land_to_peat_extraction',
+    'otherland_to_cropland',
+    'otherland_to_forestland',
+    'otherland_to_grassland',
+    'otherland_to_settlement',
+    'peatland_restoration',
+    'settlement_to_cropland',
+    'settlement_to_forestland',
+    'settlement_to_grassland',
+    'settlement_to_otherland',
+    'wetland_to_cropland',
+    'wetland_to_forestland',
+    'wetland_to_grassland',
+    'wetland_to_otherland',
+    'wetland_to_settlement']
+
+LAND_TYPES_LIST_21_TO_30 = [
+    'forestland_remaining_forestland',
+    'cropland_remaining_cropland',
+    'grassland_remaining_grassland',
+    'peat_extraction_remaining_peat_extraction',
+    'wetland_remaining_wetland',
+    'settlement_remaining_settlement']
+
+##################################################################################################
+# The following lists are used to "zero out" the emissions for years 2-20 in the emissions calculation
+
+ZERO_LIST_FIRST_20_LAND_TYPES = [
+    'forestland_to_cropland',
+    'forestland_to_grassland',
+    'forestland_to_otherland',
+    'forestland_to_settlement'
+]
+
+ZERO_LIST_FIRST_20_LAND_USE_CHANGE_FACTOR_NAMES = [
+    "aboveground_biomass",
+    "belowground_biomass",
+    "dead_wood",
+    "litter"
+]
+
+ZERO_LIST_LAST_10 = [
+    'forestland_to_otherland',
+    'cropland_to_otherland',
+    'grassland_to_otherland',
+    'wetland_to_otherland',
+    'settlement_to_otherland'
+]
+##################################################################################################

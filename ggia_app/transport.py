@@ -92,6 +92,8 @@ def calculate_emissions(country, settlement_distribution):
 
     emissions = {}
     country_data = Country.query.filter_by(name=country).first()
+    if country_data is None:
+        country_data = Country.query.filter_by(dataset_name=country).first()
 
     for transport_mode in country_data.transport_modes:
         settlement_weights = SettlementWeights.query.filter_by(transit_mode=transport_mode.name).all()
@@ -105,8 +107,12 @@ def calculate_emissions(country, settlement_distribution):
 
 def calculate_yearly_projections(country, population, year, emissions):
     projections = {}
-    annual_population_growth_factors = YearlyGrowthFactors.query.filter_by(
-        country=country,
+    country_data = Country.query.filter_by(name=country).first()
+    if country_data is None:
+        country_data = Country.query.filter_by(dataset_name=country).first()
+
+    annual_population_growth_factors = YearlyGrowthFactor.query.filter_by(
+        country_id=country_data.id,
         growth_factor_name="annual_population_change"
     ).all()
 
@@ -115,14 +121,15 @@ def calculate_yearly_projections(country, population, year, emissions):
     for key in emissions.keys():
         if key == "total":
             continue
-        annual_transport_growth_factors = YearlyGrowthFactors.query.filter_by(
-            country=country,
+        annual_transport_growth_factors = YearlyGrowthFactor.query.filter_by(
+            country_id=country_data.id,
             growth_factor_name=YEARLY_GROWTH_FACTOR_NAMES[key]
         ).all()
         projections[key] = calculate_projections_by_growth_factors(
             annual_transport_growth_factors,
             annual_population,
             emissions[key] * population, year)
+    projections = calculate_total(projections)
 
     projections["population"] = annual_population
 
@@ -458,7 +465,7 @@ def route_new_development():
                }, 400
 
     baseline_result = calculate_baseline(baseline)
-    new_development_result = calculate_new_development(
+    _, new_development_result = calculate_new_development(
         baseline, baseline_result["projections"], new_development)
 
     return {
