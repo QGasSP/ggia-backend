@@ -9,6 +9,7 @@ import ggia_app.land_use_change as land_use_change
 import ggia_app.consumption as consumption
 from ggia_app.models import db, Country, TransportMode, LandUseChange
 from ggia_app.config import *
+from ggia_app.buildings import blue_print
 
 
 def create_app(test_config=None):
@@ -42,6 +43,7 @@ def create_app(test_config=None):
     app.register_blueprint(importer.blue_print)
     app.register_blueprint(countries.blue_print)
     app.register_blueprint(land_use_change.blue_print)
+    app.register_blueprint(buildings.blue_print)
     app.register_blueprint(consumption.blue_print)
 
     @app.route('/')
