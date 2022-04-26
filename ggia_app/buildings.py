@@ -1,5 +1,6 @@
 from random import randint
 from flask import Blueprint, request
+import humps
 
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
@@ -13,10 +14,10 @@ def post_buildings_baseline():
     mockr_result = {year: {parameter: randint(0, 1000) for parameter in parameters} for year in
                     range(2025, 2051)}
 
-    return {
+    return humps.camelize({
         "status": "success",
         "data": mockr_result
-    }
+    })
 
 
 @blue_print.route("settlements", methods=["POST"])
@@ -27,10 +28,10 @@ def post_settlements():
     mockr_result = {year: {parameter: randint(0, 1000) for parameter in parameters} for year in
                     range(2025, 2051)}
 
-    return {
+    return humps.camelize({
         "status": "success",
         "data": mockr_result
-    }
+    })
 
 
 @blue_print.route("policy", methods=["POST"])
@@ -41,7 +42,7 @@ def post_policy_quantification():
     mockr_result = {year: {parameter: randint(0, 1000) for parameter in parameters} for year in
                     range(2025, 2051)}
 
-    return {
+    return humps.camelize({
         "status": "success",
         "data": mockr_result
-    }
+    })
