@@ -10,14 +10,15 @@ blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/build
 
 @blue_print.route("baseline", methods=["POST"])
 def post_buildings_baseline():
-    data = request.json
+    request_body = humps.decamelize(request.json)
+
     residential_baseline = calculate_baseline_emission(
-        start_year=data['year'],
-        country=data['country'],
-        apartment_number=data['residential']['apartment'],
-        terraced_number=data['residential']['terraced'],
-        semi_detach_number=data['residential']['semiDetached'],
-        detach_number=data['residential']['detached'],
+        start_year=request_body['year'],
+        country=request_body['country'],
+        apartment_number=request_body['baseline']['residential']['apartment'],
+        terraced_number=request_body['baseline']['residential']['terraced'],
+        semi_detach_number=request_body['baseline']['residential']['semi_detached'],
+        detach_number=request_body['baseline']['residential']['detached'],
     )
 
     return {
