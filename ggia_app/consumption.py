@@ -746,7 +746,7 @@ class Consumption:
 
     def local_heating(self, local_demand_kv, emission_intensities, district_prop, elec_heat_prop,
                     combustable_fuels_prop, liquids_prop,
-                    gas_prop, solids_prop, district_val, total_heat_fuel):
+                    gas_prop, solids_prop, district_val):
         """
         THIS JUST REPEATS BASELINE QUESTIONS 9 - 10.
         ALLOWING THE USER TO CHANGE THE VALUES
@@ -778,12 +778,12 @@ class Consumption:
           Careful, this means this field is permanently changed after a call to this method
         """
 
-        # total_heat_fuel = (demand_kv[DISTRICT_SERVICE_LABEL]
-        #       + demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
-        #       + self.adjustable_amounts["elec_heat"]
-        #       + self.adjustable_amounts["elec_cool"]
-        #     )/self.elec_price + demand_kv[LIQUID_TYPES].sum() \
-        #       + demand_kv[SOLID_TYPES].sum() + demand_kv[GAS_TYPES].sum()
+        total_heat_fuel = (local_demand_kv[DISTRICT_SERVICE_LABEL]
+               + local_demand_kv[ELECTRICITY_TYPES].sum()*(self.adjustable_amounts["elec_water"]
+               + self.adjustable_amounts["elec_heat"]
+               + self.adjustable_amounts["elec_cool"]
+             )*self.elec_price + local_demand_kv[LIQUID_TYPES].sum() \
+               + local_demand_kv[SOLID_TYPES].sum() + local_demand_kv[GAS_TYPES].sum())
 
         # DISTRICT HEATING
         local_demand_kv[DISTRICT_SERVICE_LABEL] = total_heat_fuel * district_prop
@@ -980,13 +980,13 @@ class Consumption:
         self.gases_prop = gases_prop
 
 
-        if district_value < DELTA_ZERO: # close to zero
-            district_value = \
-                self.emission_intensities \
-                    .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
-            self.district_value = district_value
-        else:
-            self.district_value = district_value
+        #if district_value < DELTA_ZERO: # close to zero
+        #    district_value = \
+        #        self.emission_intensities \
+        #            .loc[self.direct_ab,DISTRICT_SERVICE_LABEL].sum()
+        #    self.district_value = district_value
+        #else:
+        self.district_value = district_value
 
 
         # prepare empty dataframes
@@ -1025,6 +1025,13 @@ class Consumption:
                 pop_size = pop_size_policy
                 self.policy_year = policy_year
                 ############## Household Efficiency ################################
+                if s_heating:
+                    self.local_heating(local_demand_kv, local_emission_intensities,
+                        self.district_prop, self.electricity_heat_prop,
+                        self.combustable_fuels_prop,
+                        self.liquids_prop, self.gases_prop, self.solids_prop,
+                        self.district_value)
+
                 if eff_gain:
                     self.eff_improvements(local_demand_kv, eff_scaler)
 
@@ -1034,12 +1041,6 @@ class Consumption:
                     self.local_generation(local_demand_kv, local_emission_intensities,
                         el_scaler, el_type)
 
-                if s_heating:
-                    self.local_heating(local_demand_kv, local_emission_intensities,
-                        self.district_prop, self.electricity_heat_prop,
-                        self.combustable_fuels_prop,
-                        self.liquids_prop, self.gases_prop, self.solids_prop,
-                        self.district_value, total_heat_fuel)
 
                 ########### Biofuel_in_transport ####################
                 if biofuel_takeup:
@@ -1119,7 +1120,7 @@ class Consumption:
 
         df_main['Total_Emissions'] = df_main.sum(axis=1)
         df_area['Total_Emissions'] = df_area.sum(axis=1)
-        print("### DF tot", df_tot[DISTRICT_SERVICE_LABEL])
+        print("### DF tot", df_tot[SOLID_TYPES])
 
 
         ###########################################################################################
@@ -1445,21 +1446,21 @@ def testcase_finland():
     policy_main, policy_total_area_emissions  = calculation.emission_calculation(
         policy_year=2026,  # U10.1 - the year the policy is implemented
         pop_size_policy=174167,  # U10.2 - new total number of people
-        new_floor_area=5000000, #5000000,  # U10.3 - gross SQM
+        new_floor_area=0, #5000000,  # U10.3 - gross SQM
         # U11.1 - Household energy efficiency
-        eff_gain = True,  # U11.1 - consider “Household energy efficiency”?
-        eff_scaler=20,  # U11.1.1 - percentage energy reduced
+        eff_gain = False,  # U11.1 - consider “Household energy efficiency”?
+        eff_scaler=10,  # U11.1.1 - percentage energy reduced
         # U11.2 - Local electricity
-        local_electricity=False,  # U11.2.0 - consider local electricity
-        el_type='Electricity by solar photovoltaic',  # U11.2.1 - source/type
-        el_scaler=5,  # U11.2.2 - percentage of coverage
-        s_heating=True,  # U11.3.0 - heating share?
+        local_electricity=True,  # U11.2.0 - consider local electricity
+        el_type='Electricity by wind',  # U11.2.1 - source/type
+        el_scaler=20,  # U11.2.2 - percentage of coverage
+        s_heating= True,  # U11.3.0 - heating share?
         district_prop=9.8354215,  # U11.3.1 - breakdown of heating sources 0 -> default
         electricity_heat_prop=79.6750966, # one heating source 0-> default
         combustable_fuels_prop=10.489482, # one heating source 0-> default
         # breakdowns of combustable fuels
-        solids_prop = 0.0, # U11.3.2a - one heating source 0-> default
-        liquids_prop = 100.0, # U11.3.2b - one heating source 0-> default
+        solids_prop = 100.0, # U11.3.2a - one heating source 0-> default
+        liquids_prop = 0.0, # U11.3.2b - one heating source 0-> default
         gases_prop = 0.0, # U11.3.2c - one heating source 0-> default
         # district_value = emission_intensities.loc[direct_ab,DISTRICT_SERVICE_LABEL].sum()
             # - emission_intensities   0.0 #  U11.3.3
