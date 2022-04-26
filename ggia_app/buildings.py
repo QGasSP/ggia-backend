@@ -4,7 +4,7 @@ from flask import Blueprint, request
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
 
-@blue_print.route("baseline/", methods=["POST"])
+@blue_print.route("baseline", methods=["POST"])
 def post_buildings_baseline():
     request_body = request.json
 
@@ -19,7 +19,7 @@ def post_buildings_baseline():
     }
 
 
-@blue_print.route("settlements/", methods=["POST"])
+@blue_print.route("settlements", methods=["POST"])
 def post_settlements():
     request_body = request.json
     parameters = ['Apartment', 'Terraced', 'Semi-detached', 'Detached', 'Retail', 'Health',
@@ -33,7 +33,7 @@ def post_settlements():
     }
 
 
-@blue_print.route("policy/", methods=["POST"])
+@blue_print.route("policy", methods=["POST"])
 def post_policy_quantification():
     request_body = request.json
     parameters = ['Apartment', 'Terraced', 'Semi-detached', 'Detached', 'Retail', 'Health',
