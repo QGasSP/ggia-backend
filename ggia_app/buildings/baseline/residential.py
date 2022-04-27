@@ -1,15 +1,15 @@
 import pandas as pd
 
 from .apartments import calculate_apartment_emission
-from .terraced_units import calculate_terraced_emission
-from .semi_detach import calculate_semi_detach_emission
 from .detached import calculate_detach_emission
+from .semi_detach import calculate_semi_detach_emission
+from .terraced_units import calculate_terraced_emission
 
 df = pd.read_csv('CSVfiles/buildings.csv')
 
 
-def calculate_baseline_emission(start_year, country, apartment_number, terraced_number,
-                                semi_detach_number, detach_number):
+def calculate_baseline_residential_emission(start_year, country, apartment_number, terraced_number,
+                                            semi_detach_number, detach_number):
     country_map = dict(zip(df.country, df.index))
     country_code = country_map[country]
 
@@ -51,10 +51,13 @@ def calculate_baseline_emission(start_year, country, apartment_number, terraced_
     )
 
     data_frames = [apartment_emission, terraced_emission, semi_detach_emission, detach_emission]
-    energy_carriers = ['Electricity', 'Gas', 'Oil', 'Coal', 'Peat', 'Wood', 'Renewable', 'Heat']
-    U6_table = {}
-    for unit, unit_df in zip(['Apartment', 'Terraced', 'Semi-detached', 'Detached'], data_frames):
-        unit_emission_report = dict(zip(energy_carriers, unit_df.iloc[:, 0]))
-        U6_table[unit] = unit_emission_report
 
-    return U6_table
+    from collections import defaultdict
+    residential_table = {}
+    residential_result = defaultdict(dict)
+    for unit, unit_df in zip(['Apartment', 'Terraced', 'Semi-detached', 'Detached'], data_frames):
+        residential_table[unit] = unit_df.iloc[:, 0].to_dict()
+        for year, total in unit_df.sum(numeric_only=True, axis=0).to_dict().items():
+            residential_result[year].update({unit: total})
+
+    return residential_table, residential_result
