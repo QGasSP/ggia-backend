@@ -2,7 +2,7 @@ import pandas as pd
 
 
 # detach
-def calculate_detach_emission(df, country_code, emission_factors_df, start_year, unit_number):
+def detach_emission_calculator(df, country_code, emission_factors_df, start_year, unit_number):
     BUI_COL299 = df.BUI_COL299[country_code]
     BUI_COL75 = df.BUI_COL75[country_code]
     BUI_COL107 = df.BUI_COL107[country_code]
