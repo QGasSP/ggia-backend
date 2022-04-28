@@ -3,10 +3,7 @@ from random import randint
 import humps
 from flask import Blueprint, request
 
-from ggia_app.buildings.baseline import (
-    calculate_baseline_residential_emission,
-    calculate_baseline_commercial_emission
-)
+from ggia_app.buildings.baseline import calculate_baseline_emission
 
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
@@ -17,34 +14,19 @@ def post_buildings_baseline():
     residential = request_body['baseline']['residential']
     commercial = request_body['baseline']['commercial']
 
-    residential_table, residential_result = calculate_baseline_residential_emission(
-        start_year=request_body['year'],
-        country=request_body['country'],
-        apartment_number=residential['apartment'],
-        terraced_number=residential['terraced'],
-        semi_detach_number=residential['semi_detached'],
-        detach_number=residential['detached'],
+    residential_table, commercial_table, result = calculate_baseline_emission(
+        start_year=request_body['year'], country=request_body['country'],
+        apartment_number=residential['apartment'], terraced_number=residential['terraced'],
+        semi_detached_number=residential['semi_detached'], detached_number=residential['detached'],
+        retail_area=commercial['retail'], health_area=commercial['health'],
+        hospitality_area=commercial['hospitality'], office_area=commercial['offices'],
+        industrial_area=commercial['industrial'], warehouse_area=commercial['warehouses'],
     )
-
-    commercial_table, commercial_result = calculate_baseline_commercial_emission(
-        start_year=request_body['year'],
-        country=request_body['country'],
-        retail_number=commercial['retail'],
-        health_number=commercial['health'],
-        hospitality_number=commercial['hospitality'],
-        offices_number=commercial['offices'],
-        industrial_number=commercial['industrial'],
-        warehouses_number=commercial['warehouses'],
-    )
-
-    baseline_result = {}
-    baseline_result.update(residential_result)
-    baseline_result.update(commercial_result)
 
     data = {
         "residential_table": residential_table,
         "commercial_table": commercial_table,
-        "baseline": baseline_result
+        "baseline": result
     }
 
     return {
