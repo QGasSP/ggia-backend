@@ -2,12 +2,12 @@ import pandas as pd
 
 
 # SEMI-DETACH
-def calculate_semi_detach_emission(df, country_code, emission_factors_df, start_year, unit_number):
+# Electricity
+def semi_detach_emission_calculator(df, country_code, emission_factors_df, start_year, unit_number):
     BUI_COL291 = df.BUI_COL291[country_code]
     BUI_COL67 = df.BUI_COL67[country_code]
     BUI_COL99 = df.BUI_COL99[country_code]
 
-    # Electricity
     def GHG_electricitya(nraXa, nraAa, nraBa, BUI_COL291, BUI_COL67, BUI_COL99, GRID_ELECTRICITY_emission_factora):
         electricity = (((nraXa * BUI_COL291) + (nraAa * BUI_COL67) + (
                 nraBa * BUI_COL99)) * GRID_ELECTRICITY_emission_factora) / 1_000_000

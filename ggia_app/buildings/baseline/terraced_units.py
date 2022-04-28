@@ -3,12 +3,12 @@ import pandas as pd
 
 
 # TTERRACED UNITS
-def calculate_terraced_emission(df, country_code, emission_factors_df, start_year, unit_number):
+# Electricity
+def terraced_emission_calculator(df, country_code, emission_factors_df, start_year, unit_number):
     BUI_COL283 = df.BUI_COL283[country_code]
     BUI_COL59 = df.BUI_COL59[country_code]
     BUI_COL91 = df.BUI_COL91[country_code]
 
-    # Electricity
     def GHG_electricitya(nraXa, nraAa, nraBa, BUI_COL283, BUI_COL59, BUI_COL91, GRID_ELECTRICITY_emission_factora):
         electricity = (((nraXa * BUI_COL283) + (nraAa * BUI_COL59) + (
                 nraBa * BUI_COL91)) * GRID_ELECTRICITY_emission_factora) / 1_000_000
