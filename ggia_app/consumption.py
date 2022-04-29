@@ -1529,7 +1529,7 @@ def route_consumption():
 
     sectors = list(IW_SECTORS_T.columns)
 
-    def dict_and_skip_zeros(dataframe):
+    def dict_zeros_skipper(dataframe):
         """
         Take dataframe with leading years and skip leading zeros
         """
@@ -1543,21 +1543,23 @@ def route_consumption():
                 result[key] = value
         return result
 
+    dict_zeros = dict  # can be switched to dict_zeros_skipper if frontend understands
+
     consumption_response = dict()
     bl_serial = dict()
     bl_max = 0.0
     for key in sectors:
-        bl_serial[key] = dict_and_skip_zeros(baseline_main[key])
+        bl_serial[key] = dict_zeros(baseline_main[key])
         new_max = baseline_main[key].max()
         if new_max > bl_max:
             bl_max = new_max
     consumption_response["BL"] = bl_serial
     consumption_response["BL_max"] = bl_max
     consumption_response["BL_total_emissions"] = \
-        dict_and_skip_zeros(baseline_main["Total_Emissions"])
+        dict_zeros(baseline_main["Total_Emissions"])
     consumption_response["BL_total_emissions_max"] = baseline_main["Total_Emissions"].max()
     consumption_response["BL_total_area_emissions"] = \
-        dict_and_skip_zeros(baseline_total_area_emissions)
+        dict_zeros(baseline_total_area_emissions)
     consumption_response["BL_total_area_emissions_max"] = baseline_total_area_emissions.max()
 
     # policy application and computation
@@ -1610,13 +1612,13 @@ def route_consumption():
     if not calculation.is_baseline:  # more than baseline
         p1_serial = dict()
         for key in sectors:
-            p1_serial[key] = dict_and_skip_zeros(policy_main[key])
+            p1_serial[key] = dict_zeros(policy_main[key])
         consumption_response["P1"] = p1_serial
         consumption_response["P1_total_emissions"] = \
-            dict_and_skip_zeros(policy_main["Total_Emissions"])
+            dict_zeros(policy_main["Total_Emissions"])
         consumption_response["P1_total_emissions_max"] = policy_main["Total_Emissions"].max()
         consumption_response["P1_total_area_emissions"] = \
-            dict_and_skip_zeros(policy_total_area_emissions)
+            dict_zeros(policy_total_area_emissions)
         consumption_response["P1_total_area_emissions_max"] = policy_total_area_emissions.max()
 
         # also the summed emissions are needed
@@ -1637,7 +1639,7 @@ def route_consumption():
             # ^^^ only for debugging
 
             consumption_response[f"{abbr}_Summed_Emissions"] = \
-                dict_and_skip_zeros(policy_summed.Summed_Emissions)
+                dict_zeros(policy_summed.Summed_Emissions)
 
 
     # sometimes these defaults are intersting
