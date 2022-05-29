@@ -2,8 +2,10 @@ from random import randint
 
 import humps
 from flask import Blueprint, request
+from marshmallow import ValidationError
 
 from ggia_app.buildings.baseline import calculate_baseline_emission
+from ggia_app.buildings.schemas import BaselineSchema
 
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
@@ -11,6 +13,14 @@ blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/build
 @blue_print.route("baseline", methods=["POST"])
 def post_buildings_baseline():
     request_body = humps.decamelize(request.json)
+    try:
+        BaselineSchema.load(data=request_body, many=False, partial=False, unknown="EXCLUDE")
+    except ValidationError as err:
+        return (
+            {"status": "invalid", "messages": err.messages},
+            400
+        )
+
     residential = request_body['baseline']['residential']
     commercial = request_body['baseline']['commercial']
 
