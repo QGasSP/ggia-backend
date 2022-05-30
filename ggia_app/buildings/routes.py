@@ -5,7 +5,7 @@ from flask import Blueprint, request
 from marshmallow import ValidationError
 
 from ggia_app.buildings.baseline import calculate_baseline_emission
-from ggia_app.buildings.schemas import BaselineSchema, SettlementsSchema
+from ggia_app.buildings.schemas import BaselineSchema, SettlementsSchema, PolicySchema
 
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
@@ -77,6 +77,15 @@ def post_settlements():
 @blue_print.route("policy", methods=["POST"])
 def post_policy_quantification():
     request_body = humps.decamelize(request.json)
+    policy_schema = PolicySchema()
+    try:
+        policy_schema.load(data=request_body, many=False, partial=False, unknown="EXCLUDE")
+    except ValidationError as err:
+        return (
+            {"status": "invalid", "messages": err.messages},
+            400
+        )
+
     residential_retrofit = request_body['policy_quantification']['residential_retrofit']
     commercial_retrofit = request_body['policy_quantification']['commercial_retrofit']
 
