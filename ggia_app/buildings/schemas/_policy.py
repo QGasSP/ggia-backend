@@ -7,13 +7,13 @@ from ggia_app.buildings.schemas._validators import (
 )
 
 
-residential_types = ["apartment", "terraced", "semi_detached", "detached"]
-commercial_types = ["retail", "health", "hospitality", "offices", "industrial", "warehouses"]
+residential_units = ["apartment", "terraced", "semi_detached", "detached"]
+commercial_units = ["retail", "health", "hospitality", "offices", "industrial", "warehouses"]
 
 class ResidentialRetrofitBaseFieldSchema(Schema):
     unit_type = fields.String(
         required=True,
-        validate=[OneOf(residential_types)]
+        validate=[OneOf(residential_units)]
     )
     number_of_units = fields.Integer(required=True, validate=[gte_zero_range_validator])
     energy_use_before = fields.String(required=True, validate=[one_of_available_indicative])
@@ -33,7 +33,7 @@ class ResidentialRetrofitSchema(Schema):
 
 
 class CommercialRetrofitBaseFieldSchema(Schema):
-    building_type = fields.String(required=True, validate=[OneOf(commercial_types)])
+    building_type = fields.String(required=True, validate=[OneOf(commercial_units)])
     total_floor_area = fields.Integer(required=True, validate=[gte_zero_range_validator])
     energy_demand_reduction_percent = fields.Integer(
         required=True,
@@ -56,11 +56,11 @@ class CommercialRetrofitSchema(Schema):
 class BuildingChangesBaseFieldSchema(Schema):
     from_type = fields.String(
         required=True,
-        validate=[OneOf(residential_types + commercial_types)]
+        validate=[OneOf(residential_units + commercial_units)]
     )
     to_type = fields.String(
         required=True,
-        validate=[OneOf(residential_types + commercial_types)]
+        validate=[OneOf(residential_units + commercial_units)]
     )
     total_floor_area = fields.Integer(required=True, validate=[gte_zero_range_validator])
     from_conversions_implemented = fields.Integer(
