@@ -5,7 +5,7 @@ from flask import Blueprint, request
 from marshmallow import ValidationError
 
 from ggia_app.buildings.baseline import calculate_baseline_emission
-from ggia_app.buildings.schemas import BaselineSchema
+from ggia_app.buildings.schemas import BaselineSchema, SettlementsSchema
 
 blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/buildings")
 
@@ -13,8 +13,9 @@ blue_print = Blueprint("building", __name__, url_prefix="/api/v1/calculate/build
 @blue_print.route("baseline", methods=["POST"])
 def post_buildings_baseline():
     request_body = humps.decamelize(request.json)
+    baseline_schema = BaselineSchema()
     try:
-        BaselineSchema.load(data=request_body, many=False, partial=False, unknown="EXCLUDE")
+        baseline_schema.load(data=request_body, many=False, partial=False, unknown="EXCLUDE")
     except ValidationError as err:
         return (
             {"status": "invalid", "messages": err.messages},
@@ -48,6 +49,15 @@ def post_buildings_baseline():
 @blue_print.route("settlements", methods=["POST"])
 def post_settlements():
     request_body = humps.decamelize(request.json)
+    settlements_schema = SettlementsSchema()
+    try:
+        settlements_schema.load(data=request_body, many=False, partial=False, unknown="EXCLUDE")
+    except ValidationError as err:
+        return (
+            {"status": "invalid", "messages": err.messages},
+            400
+        )
+
     construction_residential = request_body['construction']['residential']
     construction_commercial = request_body['construction']['commercial']
     densification_residential = request_body['densification']['residential']
