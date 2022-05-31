@@ -2,9 +2,9 @@ from collections import defaultdict
 
 import pandas as pd
 
+from ggia_app.buildings.utils.emission_factor_calculator import emission_factor
 from .apartments import apartment_emission_calculator
 from .detached import detach_emission_calculator
-from .emission_factor_calculator import emission_factor
 from .health import health_emission_calculator
 from .hospitality import hospitality_emission_calculator
 from .industrial import industrial_emission_calculator
@@ -31,39 +31,49 @@ def calculate_baseline_emission(
     emission_factors_df = pd.DataFrame(emission_factors)
 
     apartment_emission = apartment_emission_calculator(
-        df, country_code, emission_factors_df, start_year, apartment_number)
+        df, country_code, emission_factors_df, start_year, apartment_number
+    )
     terraced_emission = terraced_emission_calculator(
-        df, country_code, emission_factors_df, start_year, terraced_number)
+        df, country_code, emission_factors_df, start_year, terraced_number
+    )
     semi_detach_emission = semi_detach_emission_calculator(
-        df, country_code, emission_factors_df, start_year, semi_detached_number)
+        df, country_code, emission_factors_df, start_year, semi_detached_number
+    )
     detach_emission = detach_emission_calculator(
-        df, country_code, emission_factors_df, start_year, detached_number)
+        df, country_code, emission_factors_df, start_year, detached_number
+    )
     retail_emission = retail_emission_calculator(
-        df, country_code, emission_factors_df, start_year, retail_area)
+        df, country_code, emission_factors_df, start_year, retail_area
+    )
     health_emission = health_emission_calculator(
-        df, country_code, emission_factors_df, start_year, health_area)
+        df, country_code, emission_factors_df, start_year, health_area
+    )
     hospitality_emission = hospitality_emission_calculator(
-        df, country_code, emission_factors_df, start_year, hospitality_area)
+        df, country_code, emission_factors_df, start_year, hospitality_area
+    )
     office_emission = office_emission_calculator(
-        df, country_code, emission_factors_df, start_year, office_area)
+        df, country_code, emission_factors_df, start_year, office_area
+    )
     industrial_emission = industrial_emission_calculator(
-        df, country_code, emission_factors_df, start_year, industrial_area)
+        df, country_code, emission_factors_df, start_year, industrial_area
+    )
     warehouse_emission = warehouse_emission_calculator(
-        df, country_code, emission_factors_df, start_year, warehouse_area)
+        df, country_code, emission_factors_df, start_year, warehouse_area
+    )
 
-    data_frames_residential = [apartment_emission, terraced_emission, semi_detach_emission,
-                               detach_emission]
-    data_frames_commercial = [retail_emission, health_emission, hospitality_emission,
-                              office_emission,
-                              industrial_emission, warehouse_emission]
+    data_frames_residential = [
+        apartment_emission, terraced_emission, semi_detach_emission, detach_emission
+    ]
+    data_frames_commercial = [
+        retail_emission, health_emission, hospitality_emission, office_emission,
+        industrial_emission, warehouse_emission
+    ]
 
     def output_table(unit_types, data_frames):
-        table = {}
-        for unit, unit_df in zip(unit_types, data_frames):
-            current_year_emission = unit_df.iloc[:, 0]
-            unit_emission_report = dict(zip(energy_carriers, current_year_emission))
-            table[unit] = unit_emission_report
-        return table
+        return {
+            unit: dict(zip(energy_carriers, unit_df.iloc[:, 0]))
+            for unit, unit_df in zip(unit_types, data_frames)
+        }
 
     residential_units = ['Apartment', 'Terraced', 'Semi-detached', 'Detached']
     residential_table = output_table(residential_units, data_frames_residential)
