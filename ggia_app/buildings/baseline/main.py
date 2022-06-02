@@ -60,6 +60,27 @@ def calculate_baseline_emission(
     warehouse_emission = warehouse_emission_calculator(
         df, country_code, emission_factors_df, start_year, warehouse_area
     )
+    return (
+        apartment_emission, terraced_emission, semi_detach_emission, detach_emission,
+        retail_emission, health_emission, hospitality_emission, office_emission,
+        industrial_emission, warehouse_emission
+    )
+
+
+def baseline_emission_graph(
+        start_year, country, apartment_number, terraced_number, semi_detached_number,
+        detached_number, retail_area, health_area, hospitality_area, office_area, industrial_area,
+        warehouse_area
+):
+    base_line_emission = calculate_baseline_emission(
+        start_year, country,
+        apartment_number, terraced_number, semi_detached_number, detached_number, retail_area,
+        health_area, hospitality_area, office_area, industrial_area, warehouse_area
+    )
+
+    apartment_emission, terraced_emission, semi_detach_emission, detach_emission, \
+    retail_emission, health_emission, hospitality_emission, office_emission, industrial_emission, \
+    warehouse_emission = base_line_emission
 
     data_frames_residential = [
         apartment_emission, terraced_emission, semi_detach_emission, detach_emission
