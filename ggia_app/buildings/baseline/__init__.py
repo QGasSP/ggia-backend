@@ -1,3 +1,3 @@
-from .main import calculate_baseline_emission
+from .main import baseline_emission_graph
 
-__all__ = [calculate_baseline_emission]
+__all__ = ["baseline_emission_graph"]

@@ -1,4 +1,9 @@
-from .apartment import apartment_emission as mother
+from .unit7.retail import retail_emission as _retail_emission
+from .unit7.health import health_emission as _health_emission
+from .unit7.hospitality import hospitality_emission as _hospitality_emission
+from .unit7.office import office_emission as _office_emission
+from .unit7.industrial import industrial_emission as _industrial_emission
+from .unit7.warehouse import warehouse_emission as _warehouse_emission
 
 
 def u72_emission(
@@ -15,37 +20,37 @@ def u72_emission(
         warehouses_renewables_percent
 ):
     retail_after_renewable = (100 - retail_renewables_percent) / 100
-    retail_emission = retail_after_renewable * mother(
+    retail_emission = retail_after_renewable * _retail_emission(
         df, country_code, emission_factors_df, start_year,
         retail_floor_area, retail_completed_from, retail_completed_to
     )
 
     health_after_renewable = (100 - health_renewables_percent) / 100
-    health_emission = health_after_renewable * mother(
+    health_emission = health_after_renewable * _health_emission(
         df, country_code, emission_factors_df, start_year,
         health_floor_area, health_completed_from, health_completed_to
     )
 
     hospitality_after_renewable = (100 - hospitality_renewables_percent) / 100
-    hospitality_emission = hospitality_after_renewable * mother(
+    hospitality_emission = hospitality_after_renewable * _hospitality_emission(
         df, country_code, emission_factors_df, start_year,
         hospitality_floor_area, hospitality_completed_from, hospitality_completed_to
     )
 
     offices_after_renewable = (100 - offices_renewables_percent) / 100
-    offices_emission = offices_after_renewable * mother(
+    offices_emission = offices_after_renewable * _office_emission(
         df, country_code, emission_factors_df, start_year,
         offices_floor_area, offices_completed_from, offices_completed_to
     )
 
     industrial_after_renewable = (100 - industrial_renewables_percent) / 100
-    industrial_emission = industrial_after_renewable * mother(
+    industrial_emission = industrial_after_renewable * _industrial_emission(
         df, country_code, emission_factors_df, start_year,
         industrial_floor_area, industrial_completed_from, industrial_completed_to
     )
 
     warehouses_after_renewable = (100 - warehouses_renewables_percent) / 100
-    warehouses_emission = warehouses_after_renewable * mother(
+    warehouses_emission = warehouses_after_renewable * _warehouse_emission(
         df, country_code, emission_factors_df, start_year,
         warehouses_floor_area, warehouses_completed_from, warehouses_completed_to
     )
