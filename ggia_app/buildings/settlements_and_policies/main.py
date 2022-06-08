@@ -212,6 +212,7 @@ def calculate_settlements_emission(
         yearly = {'baseline': baseline_df[y].sum()}
         for u, d in zip(units, data_frames):
             yearly[u] = d[y].sum()
+        yearly['Total'] = sum(yearly[unit] for unit in units)
         U78_graph[y] = yearly
 
     return U78_table_residential, U78_table_commercial, U78_graph
