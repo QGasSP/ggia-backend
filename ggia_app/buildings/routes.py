@@ -17,7 +17,7 @@ def post_buildings_baseline():
         baseline_schema.load(data=request_body, many=False, partial=False)
     except ValidationError as err:
         return (
-            {"status": "invalid", "messages": err.messages},
+            {"status": "invalid", "messages": humps.camelize(err.messages)},
             400
         )
 
@@ -53,7 +53,7 @@ def post_settlements_and_policy():
         settlements_and_policy_schema.load(data=request_body, many=False, partial=False)
     except ValidationError as err:
         return (
-            {"status": "invalid", "messages": err.messages},
+            {"status": "invalid", "messages": humps.camelize(err.messages)},
             400
         )
 
@@ -207,9 +207,6 @@ def post_settlements_and_policy():
             "renewable_energy_percent"],
     )
 
-    data = {
-
-    }
     data = {
         "settlements_table": settlements_table,
         "policy_table": policy_table,
