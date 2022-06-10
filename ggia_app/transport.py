@@ -363,7 +363,7 @@ def route_baseline():
                    "messages": err.messages
                }, 400
 
-    _, _, _, baseline_result = calculate_baseline(baseline)
+    baseline_result = calculate_baseline(baseline)
 
     return {
         "status": "success",
@@ -391,14 +391,9 @@ def route_new_development():
                    "messages": err.messages
                }, 400
 
-    country_data, \
-    baseline_grid_electricity_ef, \
-    baseline_population_by_year, \
     baseline_result = calculate_baseline(baseline)
 
-    new_development_result = calculate_new_development(country_data,
-                                                       baseline,
-                                                       baseline_population_by_year,
+    new_development_result = calculate_new_development(baseline,
                                                        baseline_result["projections"],
                                                        new_development)
 
@@ -458,12 +453,6 @@ def calculate_baseline(baseline):
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
-    # Debugging script | Remove while deploying
-    if country_data.empty:
-        print("EXCEPT! Received incorrect country name!")
-
-    grid_electricity_emission_factor = {}
-    population_by_year = {}
 
     grid_electricity_emission_factor = calculate_grid_electricity_emission_factor(country_data)
     population_by_year = calculate_population(population, year, country_data)
@@ -477,10 +466,9 @@ def calculate_baseline(baseline):
     for transport_type in projections:
         emissions[transport_type] = projections[transport_type][year]
 
-    return country_data, \
-           grid_electricity_emission_factor, \
-           population_by_year, \
-           {
+    projections["population"] = population_by_year
+
+    return {
                "emissions": emissions,
                "projections": projections
            }
@@ -1219,15 +1207,21 @@ def calculate_baseline_emissions_waterways_transport(country_data, baseline_v):
 
 # NEW DEVELOPMENT ########################################
 
-def calculate_new_development(country_data,
-                              baseline,
-                              baseline_population_by_year,
+def calculate_new_development(baseline,
                               baseline_result,
                               new_development):
+    country = baseline["country"]
+
     new_residents = new_development["new_residents"]
     new_settlement_distribution = new_development["new_settlement_distribution"]
     year_start = new_development["year_start"]
     year_finish = new_development["year_finish"]
+
+    df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
+                     skiprows=7)  # Skipping first 7 lines to ensure headers are correct
+    df.fillna(0, inplace=True)
+
+    country_data = df.loc[df["country"] == country]
 
     new_residents = calculate_residents_after_new_development(country_data,
                                                               new_residents,
@@ -1265,24 +1259,29 @@ def calculate_residents_after_new_development(country_data,
     if year_finish <= year_start:
         return {}
 
-    population_per_year = new_residents / (year_finish - year_start)
-    population = 0
     residents = {}
 
     annual_change_2020_2030 = country_data.POP_COL1.to_numpy()[0]
     annual_change_2030_2040 = country_data.POP_COL2.to_numpy()[0]
     annual_change_2040_2050 = country_data.POP_COL3.to_numpy()[0]
 
-    for year in range(year_start, year_finish):
-        population += population_per_year
-        residents[year] = math.ceil(population)
+    for year in range(2021, 2051):
+        residents[year] = 0
 
     for year in range(2021, 2051):
-        if 2021 <= year <= 2030:
-            residents[year] = math.ceil(residents[year] * (100 + annual_change_2020_2030) / 100)
-        elif 2031 <= year <= 2040:
-            residents[year] = math.ceil(residents[year] * (100 + annual_change_2030_2040) / 100)
-        elif 2041 <= year <= 2050:
-            residents[year] = math.ceil(residents[year] * (100 + annual_change_2040_2050) / 100)
+        if year_start <= year <= year_finish:
+            residents[year] = math.ceil(
+                residents[year - 1] + new_residents / (year_finish - year_start + 1))
+        else:
+            if 2021 <= year <= 2030:
+                if year != 2021:  # Skip 2021
+                    residents[year] = math.ceil(
+                        residents[year - 1] * (100 + annual_change_2020_2030) / 100)
+            elif 2031 <= year <= 2040:
+                residents[year] = math.ceil(
+                    residents[year - 1] * (100 + annual_change_2030_2040) / 100)
+            elif 2041 <= year <= 2050:
+                residents[year] = math.ceil(
+                    residents[year - 1] * (100 + annual_change_2040_2050) / 100)
 
     return residents
