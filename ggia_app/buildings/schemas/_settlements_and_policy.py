@@ -98,12 +98,12 @@ class ResidentialRetrofitBaseFieldSchema(Schema):
 
 
 class ResidentialRetrofitSchema(Schema):
-    retrofit1 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
-    retrofit2 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
-    retrofit3 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
-    retrofit4 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
-    retrofit5 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
-    retrofit6 = fields.Nested(ResidentialRetrofitBaseFieldSchema)
+    retrofit1 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
+    retrofit2 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
+    retrofit3 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
+    retrofit4 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
+    retrofit5 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
+    retrofit6 = fields.Nested(ResidentialRetrofitBaseFieldSchema, required=False)
 
 
 class CommercialRetrofitBaseFieldSchema(Schema):
@@ -119,12 +119,12 @@ class CommercialRetrofitBaseFieldSchema(Schema):
 
 
 class CommercialRetrofitSchema(Schema):
-    retrofit1 = fields.Nested(CommercialRetrofitBaseFieldSchema)
-    retrofit2 = fields.Nested(CommercialRetrofitBaseFieldSchema)
-    retrofit3 = fields.Nested(CommercialRetrofitBaseFieldSchema)
-    retrofit4 = fields.Nested(CommercialRetrofitBaseFieldSchema)
-    retrofit5 = fields.Nested(CommercialRetrofitBaseFieldSchema)
-    retrofit6 = fields.Nested(CommercialRetrofitBaseFieldSchema)
+    retrofit1 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
+    retrofit2 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
+    retrofit3 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
+    retrofit4 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
+    retrofit5 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
+    retrofit6 = fields.Nested(CommercialRetrofitBaseFieldSchema, required=False)
 
 
 class BuildingChangesBaseFieldSchema(Schema):
@@ -147,12 +147,12 @@ class BuildingChangesBaseFieldSchema(Schema):
 
 
 class BuildingChangesSchema(Schema):
-    retrofit1 = fields.Nested(BuildingChangesBaseFieldSchema)
-    retrofit2 = fields.Nested(BuildingChangesBaseFieldSchema)
-    retrofit3 = fields.Nested(BuildingChangesBaseFieldSchema)
-    retrofit4 = fields.Nested(BuildingChangesBaseFieldSchema)
-    retrofit5 = fields.Nested(BuildingChangesBaseFieldSchema)
-    retrofit6 = fields.Nested(BuildingChangesBaseFieldSchema)
+    retrofit1 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
+    retrofit2 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
+    retrofit3 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
+    retrofit4 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
+    retrofit5 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
+    retrofit6 = fields.Nested(BuildingChangesBaseFieldSchema, required=False)
 
 
 class policyQuantificationNestedSchema(Schema):
