@@ -349,6 +349,68 @@ def calculate_emission(transport_mode, correction_factor):
 
 # NEW CODE ##################################################
 
+@blue_print.route("baseline", methods=["GET", "POST"])
+def route_baseline():
+    request_body = humps.decamelize(request.json)
+    baseline_schema = Baseline()
+    baseline = request_body.get("baseline", -1)
+
+    try:
+        baseline_schema.load(baseline)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    _, _, _, baseline_result = calculate_baseline(baseline)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_result
+        }
+    }
+
+
+@blue_print.route("new-development", methods=["GET", "POST"])
+def route_new_development():
+    request_body = humps.decamelize(request.json)
+    baseline = request_body.get("baseline", -1)
+    new_development = request_body.get("new_development", -1)
+
+    baseline_schema = Baseline()
+    new_development_schema = NewDevelopment()
+
+    try:
+        baseline_schema.load(baseline)
+        new_development_schema.load(new_development)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    country_data, \
+    baseline_grid_electricity_ef, \
+    baseline_population_by_year, \
+    baseline_result = calculate_baseline(baseline)
+
+    new_development_result = calculate_new_development(country_data,
+                                                       baseline,
+                                                       baseline_population_by_year,
+                                                       baseline_result["projections"],
+                                                       new_development)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_result,
+            "new_development": new_development_result
+        }
+    }
+
+
 @blue_print.route("", methods=["GET", "POST"])
 def route_transport():
     request_body = humps.decamelize(request.json)
@@ -382,59 +444,7 @@ def route_transport():
     }
 
 
-@blue_print.route("baseline", methods=["GET", "POST"])
-def route_baseline():
-    request_body = humps.decamelize(request.json)
-    baseline_schema = Baseline()
-    baseline = request_body.get("baseline", -1)
-
-    try:
-        baseline_schema.load(baseline)
-    except ValidationError as err:
-        return {
-                   "status": "invalid",
-                   "messages": err.messages
-               }, 400
-
-    baseline_result = calculate_baseline(baseline)
-
-    return {
-        "status": "success",
-        "data": {
-            "baseline": baseline_result
-        }
-    }
-
-
-@blue_print.route("new-development", methods=["GET", "POST"])
-def route_new_development():
-    request_body = humps.decamelize(request.json)
-    baseline = request_body.get("baseline", -1)
-    new_development = request_body.get("new_development", -1)
-
-    baseline_schema = Baseline()
-    new_development_schema = NewDevelopment()
-
-    try:
-        baseline_schema.load(baseline)
-        new_development_schema.load(new_development)
-    except ValidationError as err:
-        return {
-                   "status": "invalid",
-                   "messages": err.messages
-               }, 400
-
-    baseline_result = calculate_baseline(baseline)
-    _, new_development_result = calculate_new_development(
-        baseline, baseline_result["projections"], new_development)
-
-    return {
-        "status": "success",
-        "data": {
-            "baseline": baseline_result,
-            "new_development": new_development_result
-        }
-    }
+# BASELINE ########################################
 
 
 def calculate_baseline(baseline):
@@ -458,13 +468,22 @@ def calculate_baseline(baseline):
     grid_electricity_emission_factor = calculate_grid_electricity_emission_factor(country_data)
     population_by_year = calculate_population(population, year, country_data)
 
-    emissions = calculate_baseline_emissions(country, year, settlement_distribution, country_data,
-                                             grid_electricity_emission_factor)
-    # projections = calculate_yearly_projections(country, population, year, emissions)
+    projections = calculate_baseline_emissions(country, year, settlement_distribution,
+                                               country_data,
+                                               grid_electricity_emission_factor)
 
-    return {
-        "emissions": emissions
-    }
+    emissions = {}
+
+    for transport_type in projections:
+        emissions[transport_type] = projections[transport_type][year]
+
+    return country_data, \
+           grid_electricity_emission_factor, \
+           population_by_year, \
+           {
+               "emissions": emissions,
+               "projections": projections
+           }
 
 
 def calculate_grid_electricity_emission_factor(country_data):
@@ -749,38 +768,32 @@ def calculate_baseline_v(country_data, transport_type, correction_factor):
                                    (100 + annual_change_2040_2050) / 100
 
     if transport_type == "metro":
-        df = pd.read_csv('CSVfiles/cities_with_metros.csv',
-                         skiprows=1)  # Skipping first line to ensure headers are correct
-        df.fillna(0, inplace=True)
+        metro_activity_by_city = {}
 
-        cities_with_metros = df[country_data["country"].to_numpy()[0]]
-
-        df = pd.read_csv('CSVfiles/percent_metro_km_by_country.csv',
-                         skiprows=1)  # Skipping first line to ensure headers are correct
-        df.fillna(0, inplace=True)
-
-        df = df[country_data["country"].to_numpy()[0]]
-
-        percent_metro_km_by_country = {}
-        for city in cities_with_metros:
-            if city != 0:
-                percent_metro_km_by_country[city] = df[cities_with_metros[
-                    cities_with_metros == city].index[0]]
+        min_col_idx = 7
+        col_count = 7
+        for i in range(min_col_idx, min_col_idx + col_count):
+            col_name = "METRO_COL"
+            col_name1 = col_name + str(i)
+            col_name2 = col_name + str(i + col_count)
+            col_value1 = country_data[col_name1].to_numpy()[0]
+            col_value2 = country_data[col_name2].to_numpy()[0]
+            if col_value1 != "no metro" and col_value1 != "-":
+                metro_activity_by_city[col_value1] = col_value2
 
         percent_metro_input = {}
 
-        for city in cities_with_metros:
-            if city != 0:
-                percent_metro_input[city] = 0  # Set ZERO by default | Will be user input
+        for city in metro_activity_by_city:
+            percent_metro_input[city] = 100  # Set 100 by default | Will be user input
 
         for year in range(2021, 2051):
             if year == 2021:
                 baseline_v[year] = 0
                 for city in percent_metro_input:
                     baseline_v[year] = baseline_v[year] + (percent_metro_input[city] / 100 *
-                                                           percent_metro_km_by_country[city])
+                                                           metro_activity_by_city[city])
 
-                baseline_v[year] = baseline_v[year] / 100 * passenger_km_per_capita / occupancy_rate
+                baseline_v[year] = baseline_v[year] / occupancy_rate
             elif 2022 <= year <= 2030:
                 baseline_v[year] = baseline_v[year - 1] * \
                                    (100 + annual_change_2020_2030) / 100
@@ -792,40 +805,32 @@ def calculate_baseline_v(country_data, transport_type, correction_factor):
                                    (100 + annual_change_2040_2050) / 100
 
     if transport_type == "tram":
-        df = pd.read_csv('CSVfiles/cities_with_trams.csv',
-                         skiprows=1)  # Skipping first line to ensure headers are correct
-        df.fillna(0, inplace=True)
+        tram_activity_by_city = {}
 
-        cities_with_trams = df[country_data["country"].to_numpy()[0]]
-
-        df = pd.read_csv('CSVfiles/percent_tram_km_by_country.csv',
-                         skiprows=1)  # Skipping first line to ensure headers are correct
-        df.fillna(0, inplace=True)
-
-        df = df[country_data["country"].to_numpy()[0]]
-
-        percent_tram_km_by_country = {}
-        for city in cities_with_trams:
-            if city != 0:
-                percent_tram_km_by_country[city] = df[cities_with_trams[
-                    cities_with_trams == city].index[0]]
+        min_col_idx = 7
+        col_count = 58
+        for i in range(min_col_idx, min_col_idx + col_count):
+            col_name = "TRAM_COL"
+            col_name1 = col_name + str(i)
+            col_name2 = col_name + str(i + col_count)
+            col_value1 = country_data[col_name1].to_numpy()[0]
+            col_value2 = country_data[col_name2].to_numpy()[0]
+            if col_value1 != "no trams" and col_value1 != "-":
+                tram_activity_by_city[col_value1] = col_value2
 
         percent_tram_input = {}
 
-        for city in cities_with_trams:
-            if city != 0:
-                percent_tram_input[city] = 0  # Set ZERO by default | Will be user input
-
-        percent_tram_input["Augsburg"] = 50  # Remove after debugging
+        for city in tram_activity_by_city:
+            percent_tram_input[city] = 100  # Set 100 by default | Will be user input
 
         for year in range(2021, 2051):
             if year == 2021:
                 baseline_v[year] = 0
                 for city in percent_tram_input:
                     baseline_v[year] = baseline_v[year] + (percent_tram_input[city] / 100 *
-                                                           percent_tram_km_by_country[city])
+                                                           tram_activity_by_city[city])
 
-                baseline_v[year] = baseline_v[year] / 100 * passenger_km_per_capita / occupancy_rate
+                baseline_v[year] = baseline_v[year] / occupancy_rate
             elif 2022 <= year <= 2030:
                 baseline_v[year] = baseline_v[year - 1] * \
                                    (100 + annual_change_2020_2030) / 100
@@ -848,11 +853,11 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
                           "suburban": country_data.BUS_COL37.to_numpy()[0],
                           "town": country_data.BUS_COL39.to_numpy()[0],
                           "rural": country_data.BUS_COL41.to_numpy()[0]}
-    share_street_driving = {"metropolitan_center": country_data.BUS_COL34.to_numpy()[0],
-                            "urban": country_data.BUS_COL36.to_numpy()[0],
-                            "suburban": country_data.BUS_COL38.to_numpy()[0],
-                            "town": country_data.BUS_COL40.to_numpy()[0],
-                            "rural": country_data.BUS_COL42.to_numpy()[0]}
+    share_street_driving = {"metropolitan_center": 100 - share_road_driving["metropolitan_center"],
+                            "urban": 100 - share_road_driving["urban"],
+                            "suburban": 100 - share_road_driving["suburban"],
+                            "town": 100 - share_road_driving["town"],
+                            "rural": 100 - share_road_driving["rural"]}
 
     init_propulsion_type = {"petrol", "lpg", "diesel", "cng", "electric", }
 
@@ -971,8 +976,8 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
                     ef_street[year] * share_street_driving[settlement_type] / 100) * \
                                              settlement_distribution[settlement_type] / 100
 
-        baseline_emissions_bus[year] = int(round(
-            baseline_v[year] * area_specific_ef_average[year] / 1000, 0))
+        baseline_emissions_bus[year] = round(
+            baseline_v[year] * area_specific_ef_average[year] / 1000, 3)
 
     return baseline_emissions_bus
 
@@ -1069,8 +1074,8 @@ def calculate_baseline_emissions_car(country_data, settlement_distribution, base
                     ef_street[year] * share_street_driving[settlement_type] / 100) * \
                                              settlement_distribution[settlement_type] / 100
 
-        baseline_emissions_car[year] = int(round(
-            baseline_v[year] * area_specific_ef_average[year] / 1000, 0))
+        baseline_emissions_car[year] = round(
+            baseline_v[year] * area_specific_ef_average[year] / 1000, 3)
 
     return baseline_emissions_car
 
@@ -1133,8 +1138,7 @@ def calculate_baseline_emissions_train(country_data,
                           electric_energy_consumption[year]) + \
                          (share_diesel_engine[year] / 100 * ef_diesel_train[year])
 
-        baseline_emissions_train[year] = int(round(
-            baseline_v[year] * ef_train[year] / 1000, 0))
+        baseline_emissions_train[year] = round(baseline_v[year] * ef_train[year] / 1000, 3)
 
     return baseline_emissions_train
 
@@ -1163,8 +1167,8 @@ def calculate_baseline_emissions_rail_transport(country_data,
                                    electric_energy_consumption[year]) + \
                                   (share_diesel_engine[year] / 100 * ef_diesel_transport[year])
 
-        baseline_emissions_rail_transport[year] = int(round(
-            baseline_v[year] * ef_rail_transport[year] / 1000, 0))
+        baseline_emissions_rail_transport[year] = round(
+            baseline_v[year] * ef_rail_transport[year] / 1000, 3)
 
     return baseline_emissions_rail_transport
 
@@ -1193,8 +1197,8 @@ def calculate_baseline_emissions_road_transport(country_data,
                                    electric_energy_consumption[year]) + \
                                   (share_diesel_engine[year] / 100 * ef_diesel_transport[year])
 
-        baseline_emissions_road_transport[year] = int(round(
-            baseline_v[year] * ef_road_transport[year] / 1000, 0))
+        baseline_emissions_road_transport[year] = round(
+            baseline_v[year] * ef_road_transport[year] / 1000, 3)
 
     return baseline_emissions_road_transport
 
@@ -1207,7 +1211,78 @@ def calculate_baseline_emissions_waterways_transport(country_data, baseline_v):
     for year in baseline_v:
         ef_waterways_transport[year] = country_data.WATER_TRN_COL2.to_numpy()[0]
 
-        baseline_emissions_waterways_transport[year] = int(round(
-            baseline_v[year] * ef_waterways_transport[year] / 1000, 0))
+        baseline_emissions_waterways_transport[year] = round(
+            baseline_v[year] * ef_waterways_transport[year] / 1000, 3)
 
     return baseline_emissions_waterways_transport
+
+
+# NEW DEVELOPMENT ########################################
+
+def calculate_new_development(country_data,
+                              baseline,
+                              baseline_population_by_year,
+                              baseline_result,
+                              new_development):
+    new_residents = new_development["new_residents"]
+    new_settlement_distribution = new_development["new_settlement_distribution"]
+    year_start = new_development["year_start"]
+    year_finish = new_development["year_finish"]
+
+    new_residents = calculate_residents_after_new_development(country_data,
+                                                              new_residents,
+                                                              year_start, year_finish)
+
+    # total, factor = calculate_total_population_after_new_development(residents,
+    #                                                                  baseline_result["population"])
+    # settlement_distribution = calculate_new_settlement_distribution(
+    #     baseline_result["population"],
+    #     total,
+    #     baseline["settlement_distribution"],
+    #     new_settlement_distribution)
+    # emission_projections = calculate_emissions_after_new_development(baseline_result, factor)
+    #
+    # return \
+    #     {
+    #         "impact": {
+    #             "population": total
+    #         },
+    #     }, \
+    #     {
+    #         "impact": {
+    #             "new_residents": residents,
+    #             "population": total,
+    #             "settlement_distribution": settlement_distribution,
+    #             "emissions": emission_projections
+    #         }
+    #     }
+    return {}
+
+
+def calculate_residents_after_new_development(country_data,
+                                              new_residents,
+                                              year_start, year_finish):
+    if year_finish <= year_start:
+        return {}
+
+    population_per_year = new_residents / (year_finish - year_start)
+    population = 0
+    residents = {}
+
+    annual_change_2020_2030 = country_data.POP_COL1.to_numpy()[0]
+    annual_change_2030_2040 = country_data.POP_COL2.to_numpy()[0]
+    annual_change_2040_2050 = country_data.POP_COL3.to_numpy()[0]
+
+    for year in range(year_start, year_finish):
+        population += population_per_year
+        residents[year] = math.ceil(population)
+
+    for year in range(2021, 2051):
+        if 2021 <= year <= 2030:
+            residents[year] = math.ceil(residents[year] * (100 + annual_change_2020_2030) / 100)
+        elif 2031 <= year <= 2040:
+            residents[year] = math.ceil(residents[year] * (100 + annual_change_2030_2040) / 100)
+        elif 2041 <= year <= 2050:
+            residents[year] = math.ceil(residents[year] * (100 + annual_change_2040_2050) / 100)
+
+    return residents
