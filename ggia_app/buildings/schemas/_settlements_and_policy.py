@@ -8,8 +8,8 @@ from ggia_app.buildings.schemas._validators import (
 )
 
 
-residential_units = ["apartment", "terraced", "semi_detached", "detached"]
-commercial_units = ["retail", "health", "hospitality", "offices", "industrial", "warehouses"]
+residential_units = ["Apartment", "Terraced", "SemiDetached", "Detached"]
+commercial_units = ["Retail", "Health", "Hospitality", "Offices", "Industrial", "Warehouses"]
 
 
 class ConstructionResidentialBaseFieldSchema(Schema):
