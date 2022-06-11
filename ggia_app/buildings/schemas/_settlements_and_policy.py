@@ -8,7 +8,7 @@ from ggia_app.buildings.schemas._validators import (
 )
 
 
-residential_units = ["Apartment", "Terraced", "SemiDetached", "Detached"]
+residential_units = ["Apartment", "Terraced", "Semi-detached", "Detached"]
 commercial_units = ["Retail", "Health", "Hospitality", "Offices", "Industrial", "Warehouses"]
 
 
