@@ -1492,13 +1492,13 @@ def route_consumption():
     def get_int(key, default=0):
         try:
             value = int(request_body.get(key, default))
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             value = default
         return value
     def get_float(key, default=0.0):
         try:
             value = float(request_body.get(key, default))
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             value = default
         return value
     def get_bool(key, default=False):
@@ -1507,7 +1507,7 @@ def route_consumption():
             if isinstance(value, bool):
                 value = str(value).lower()
                 value = not (value == "" or value == "false" or value == "0")
-        except (ValueError, KeyError):
+        except (ValueError, KeyError, TypeError):
             value=default
         return value
 
