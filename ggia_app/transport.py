@@ -38,6 +38,11 @@ def route_baseline():
             for year in list(baseline_response["projections"][ptype]):
                 if year < selected_year:
                     baseline_response["projections"][ptype].pop(year, None)
+    else:
+        return {
+                   "status": "invalid",
+                   "messages": "Check user input!"
+               }
 
     return {
         "status": "success",
@@ -102,6 +107,21 @@ def route_new_development():
             for year in list(new_development_response["impact"]["emissions"][ptype]):
                 if year < selected_year:
                     new_development_response["impact"]["emissions"][ptype].pop(year, None)
+
+    else:
+        return {
+            "status": "invalid",
+            "messages": "Check user input!"
+        }
+
+    # Replacing NANs (if any) with ZEROs
+    df = pd.DataFrame(baseline_response)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.fillna(0)
+
+    df = pd.DataFrame(new_development_response)
+    df = df.apply(pd.to_numeric, errors="coerce")
+    df = df.fillna(0)
 
     return {
         "status": "success",
@@ -176,21 +196,19 @@ def route_transport():
                 if year < selected_year:
                     new_development_response["impact"]["emissions"][ptype].pop(year, None)
 
-    # Removing years prior to selected year - QUALITY QUANTIFICATION
-
     # FOR TESTING FRONT END -- START
-    dummy_data = new_development_response["impact"]["emissions"]
-    dummy_data["total"] = {}
-
-    i = 0
-    for ptype in dummy_data.keys():
-        if i == 0:
-            for year in list(dummy_data[ptype]):
-                dummy_data["total"][year] = dummy_data[ptype][year]
-            i += 1
-        else:
-            for year in list(dummy_data[ptype]):
-                dummy_data["total"][year] = dummy_data["total"][year] + dummy_data[ptype][year]
+    # dummy_data = new_development_response["impact"]["emissions"]
+    # dummy_data["total"] = {}
+    #
+    # i = 0
+    # for ptype in dummy_data.keys():
+    #     if i == 0:
+    #         for year in list(dummy_data[ptype]):
+    #             dummy_data["total"][year] = dummy_data[ptype][year]
+    #         i += 1
+    #     else:
+    #         for year in list(dummy_data[ptype]):
+    #             dummy_data["total"][year] = dummy_data["total"][year] + dummy_data[ptype][year]
     # FOR TESTING FRONT END -- END
 
     return {
@@ -198,7 +216,7 @@ def route_transport():
         "data": {
             "baseline": baseline_response,
             "new_development": new_development_response,
-            "policy_quantification": dummy_data
+            "policy_quantification": policy_quantification_response
         }
     }
 
@@ -214,7 +232,9 @@ def calculate_baseline(baseline):
     year_range = list(range(2021, 2051))
 
     if year_range[0] > selected_year or year_range[-1] < selected_year:
-        return {}, {}
+        return {}, {
+
+        }
 
     df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
                      skiprows=7)  # Skipping first 7 lines to ensure headers are correct
@@ -234,7 +254,17 @@ def calculate_baseline(baseline):
     emissions = {}
 
     for transport_type in projections.keys():
+        for year in year_range:
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(projections[transport_type][year]):
+                projections[transport_type][year] = 0.0
+
         emissions[transport_type] = projections[transport_type][selected_year]
+
+    for year in year_range:
+        # Replacing NANs (if any) with ZEROs
+        if math.isnan(population_by_year[year]):
+            population_by_year[year] = 0.0
 
     projections["population"] = population_by_year
 
@@ -621,7 +651,7 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
                             "town": 100 - share_road_driving["town"],
                             "rural": 100 - share_road_driving["rural"]}
 
-    init_propulsion_type = {"petrol", "lpg", "diesel", "cng", "electric"}
+    init_propulsion_type = {"petrol", "lpg", "diesel", "cng", "electricity"}
 
     propulsion_share = {}
     baseline_ef_street = {}
@@ -646,7 +676,7 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
                 propulsion_share[year][prplsn_type] = country_data.BUS_COL9.to_numpy()[0]
                 baseline_ef_street[year][prplsn_type] = country_data.BUS_COL19.to_numpy()[0]
                 baseline_ef_road[year][prplsn_type] = country_data.BUS_COL24.to_numpy()[0]
-            elif prplsn_type == "electric":
+            elif prplsn_type == "electricity":
                 if year == 2021:
                     share_start_yr = country_data.BUS_COL26.to_numpy()[0]
                     share_end_yr = country_data.BUS_COL27.to_numpy()[0]
@@ -697,7 +727,7 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
                 propulsion_share[year]["petrol"] +
                 propulsion_share[year]["lpg"] +
                 propulsion_share[year]["cng"] +
-                propulsion_share[year]["electric"])
+                propulsion_share[year]["electricity"])
 
         baseline_ef_street[year]["diesel"] = country_data.BUS_COL18.to_numpy()[0]
         baseline_ef_road[year]["diesel"] = country_data.BUS_COL23.to_numpy()[0]
@@ -710,7 +740,7 @@ def calculate_baseline_emissions_bus(country_data, settlement_distribution,
         ef_street[year] = 0
 
         for prplsn_type in propulsion_share[year].keys():
-            if prplsn_type == "electric":
+            if prplsn_type == "electricity":
                 ef_road_pt = baseline_ef_road[year][prplsn_type] * \
                              propulsion_share[year][prplsn_type] / 100 * \
                              grid_electricity_emission_factor[year]
@@ -997,7 +1027,7 @@ def calculate_baseline_emissions_road_transport(country_data,
                                   "lpg": country_data.ROAD_TRN_COL12.to_numpy()[0],
                                   "diesel_hybrid": country_data.ROAD_TRN_COL13.to_numpy()[0],
                                   "ng": country_data.ROAD_TRN_COL14.to_numpy()[0],
-                                  "electric": country_data.ROAD_TRN_COL15.to_numpy()[0],
+                                  "electricity": country_data.ROAD_TRN_COL15.to_numpy()[0],
                                   "alternative": country_data.ROAD_TRN_COL16.to_numpy()[0],
                                   "bioethonol": country_data.ROAD_TRN_COL17.to_numpy()[0],
                                   "biodiesel": country_data.ROAD_TRN_COL18.to_numpy()[0],
@@ -1024,7 +1054,7 @@ def calculate_baseline_emissions_road_transport(country_data,
                                   "lpg": country_data.ROAD_TRN_COL30.to_numpy()[0],
                                   "diesel_hybrid": country_data.ROAD_TRN_COL31.to_numpy()[0],
                                   "ng": country_data.ROAD_TRN_COL32.to_numpy()[0],
-                                  "electric": country_data.ROAD_TRN_COL33.to_numpy()[0],
+                                  "electricity": country_data.ROAD_TRN_COL33.to_numpy()[0],
                                   "alternative": country_data.ROAD_TRN_COL34.to_numpy()[0],
                                   "bioethonol": country_data.ROAD_TRN_COL35.to_numpy()[0],
                                   "biodiesel": country_data.ROAD_TRN_COL36.to_numpy()[0],
@@ -1034,7 +1064,7 @@ def calculate_baseline_emissions_road_transport(country_data,
                                     "lpg": country_data.ROAD_TRN_COL21.to_numpy()[0],
                                     "diesel_hybrid": country_data.ROAD_TRN_COL22.to_numpy()[0],
                                     "ng": country_data.ROAD_TRN_COL23.to_numpy()[0],
-                                    "electric": country_data.ROAD_TRN_COL24.to_numpy()[0],
+                                    "electricity": country_data.ROAD_TRN_COL24.to_numpy()[0],
                                     "alternative": country_data.ROAD_TRN_COL25.to_numpy()[0],
                                     "bioethonol": country_data.ROAD_TRN_COL26.to_numpy()[0],
                                     "biodiesel": country_data.ROAD_TRN_COL27.to_numpy()[0],
@@ -1108,8 +1138,11 @@ def calculate_new_development(baseline,
     if year_start < beginning_year:
         return {}, {}
 
-    if year_start >= year_finish:
-        return {}, {}
+    if year_start > year_finish:
+        # Switching years
+        tmp = year_start
+        year_start = year_finish
+        year_finish = tmp
 
     df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
                      skiprows=7)  # Skipping first 7 lines to ensure headers are correct
@@ -1150,6 +1183,20 @@ def calculate_new_development(baseline,
                                                               old_correction_factors,
                                                               weighted_cf_by_transport_year)
 
+    for year in year_range:
+        # Replacing NANs (if any) with ZEROs
+        if math.isnan(new_residents_by_year[year]):
+            new_residents_by_year[year] = 0.0
+        # Replacing NANs (if any) with ZEROs
+        if math.isnan(new_population_by_year[year]):
+            new_population_by_year[year] = 0.0
+
+    for transport_type in transport_modes:
+        for year in year_range:
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(new_baseline_emissions[transport_type][year]):
+                new_baseline_emissions[transport_type][year] = 0.0
+
     return weighted_cf_by_transport_year, \
            {
                "impact": {
@@ -1163,8 +1210,11 @@ def calculate_new_development(baseline,
 
 def calculate_residents_after_new_development(year_range, country_data, new_residents,
                                               year_start, year_finish):
-    if year_finish <= year_start:
-        return {}
+    if year_start > year_finish:
+        # Switching years
+        tmp = year_start
+        year_start = year_finish
+        year_finish = tmp
 
     residents = {}
 
@@ -1304,10 +1354,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
                                     baseline_result,
                                     new_development_result,
                                     correction_factor):
-    year_range = new_development_result["impact"]["population"].keys()
-
     country = baseline["country"]
     beginning_year = baseline["year"]
+
+    year_range = new_development_result["impact"]["population"].keys()
+    new_emissions = new_development_result["impact"]["emissions"]
 
     df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
                      skiprows=7)  # Skipping first 7 lines to ensure headers are correct
@@ -1315,6 +1366,7 @@ def calculate_policy_quantification(baseline, policy_quantification,
 
     country_data = df.loc[df["country"] == country]
 
+    # U3.1 ########################################
     passenger_mobility = policy_quantification["passenger_mobility"]
     expected_change_u31 = passenger_mobility["expected_change"]
     population_affected_u31 = passenger_mobility["affected_area"]  # Name needs to fixed on FE
@@ -1324,16 +1376,18 @@ def calculate_policy_quantification(baseline, policy_quantification,
     if year_start_u31 < beginning_year or year_end_u31 < beginning_year:
         return {}
 
-    if year_start_u31 >= year_end_u31:
-        return {}
-
-    new_emissions = new_development_result["impact"]["emissions"]
+    if year_start_u31 > year_end_u31:
+        # Switching years
+        tmp = year_start_u31
+        year_start_u31 = year_end_u31
+        year_end_u31 = tmp
 
     policy_impact_passenger_mobility = calculate_policy_impact_passenger_mobility(
         year_range, country_data, new_emissions,
         expected_change_u31, population_affected_u31,
         year_start_u31, year_end_u31)
 
+    # U3.2 ########################################
     freight_transport = policy_quantification["freight_transport"]
     expected_change_u32 = freight_transport["expected_change"]
     year_start_u32 = freight_transport["year_start"]
@@ -1342,13 +1396,17 @@ def calculate_policy_quantification(baseline, policy_quantification,
     if year_start_u32 < beginning_year or year_end_u32 < beginning_year:
         return {}
 
-    if year_start_u32 >= year_end_u32:
-        return {}
+    if year_start_u32 > year_end_u32:
+        # Switching years
+        tmp = year_start_u32
+        year_start_u32 = year_end_u32
+        year_end_u32 = tmp
 
     policy_impact_freights = \
         calculate_change_policy_impact_freights(year_range, new_emissions,
                                                 expected_change_u32, year_start_u32, year_end_u32)
 
+    # U3.3 ########################################
     modal_split_passenger = policy_quantification["modal_split_passenger"]
     shares_u33 = modal_split_passenger["shares"]
     affected_population_u33 = modal_split_passenger["affected_population"]
@@ -1358,8 +1416,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     if year_start_u33 < beginning_year or year_end_u33 < beginning_year:
         return {}
 
-    if year_start_u33 >= year_end_u33:
-        return {}
+    if year_start_u33 > year_end_u33:
+        # Switching years
+        tmp = year_start_u33
+        year_start_u33 = year_end_u33
+        year_end_u33 = tmp
 
     transport_impact_passenger_mobility = \
         calculate_transport_impact_passenger_mobility(year_range,
@@ -1367,6 +1428,7 @@ def calculate_policy_quantification(baseline, policy_quantification,
                                                       shares_u33, affected_population_u33,
                                                       year_start_u33, year_end_u33)
 
+    # U3.4 ########################################
     modal_split_freight = policy_quantification["modal_split_freight"]
     shares_u34 = modal_split_freight["shares"]
     year_start_u34 = modal_split_freight["year_start"]
@@ -1375,32 +1437,94 @@ def calculate_policy_quantification(baseline, policy_quantification,
     if year_start_u34 < beginning_year or year_end_u34 < beginning_year:
         return {}
 
-    if year_start_u34 >= year_end_u34:
-        return {}
+    if year_start_u34 > year_end_u34:
+        # Switching years
+        tmp = year_start_u34
+        year_start_u34 = year_end_u34
+        year_end_u34 = tmp
 
     transport_impact_freight = \
         calculate_transport_impact_freight(year_range, country_data,
                                            policy_impact_freights,
                                            shares_u34, year_start_u34, year_end_u34)
 
+    # U3.5 ########################################
     fuel_shares_bus = policy_quantification["fuel_shares_bus"]
     types_u35 = fuel_shares_bus["types"]
     year_start_u35 = fuel_shares_bus["year_start"]
     year_end_u35 = fuel_shares_bus["year_end"]
     affected_area_u35 = fuel_shares_bus["affected_area"]
 
+    if year_start_u35 < beginning_year or year_end_u35 < beginning_year:
+        return {}
+
+    if year_start_u35 > year_end_u35:
+        # Switching years
+        tmp = year_start_u35
+        year_start_u35 = year_end_u35
+        year_end_u35 = tmp
+
     impact_bus_ef = \
-        calculate_impact_bus_ef(year_range, country_data,
+        calculate_impact_bus_ef(year_range, country_data, baseline,
                                 types_u35, year_start_u35, year_end_u35, affected_area_u35)
 
-    # impact_modal_split_pm = calculate_impact_modal_split(
-    #     modal_split_passenger, transport_impact_pm, PASSENGER_TRANSPORT)
-    # impact_modal_split_ft = calculate_impact_modal_split(
-    #     modal_split_freight, transport_impact_ft, FREIGHT_TRANSPORT)
-    #
-    # impact_modal_split = calculate_total(impact_modal_split_pm | impact_modal_split_ft)
+    # U3.6 ########################################
+    fuel_shares_car = policy_quantification["fuel_shares_car"]
+    types_u36 = fuel_shares_car["types"]
+    year_start_u36 = fuel_shares_car["year_start"]
+    year_end_u36 = fuel_shares_car["year_end"]
+    affected_area_u36 = fuel_shares_car["affected_area"]
 
-    return {}
+    if year_start_u36 < beginning_year or year_end_u36 < beginning_year:
+        return {}
+
+    if year_start_u36 > year_end_u36:
+        # Switching years
+        tmp = year_start_u36
+        year_start_u36 = year_end_u36
+        year_end_u36 = tmp
+
+    impact_car_ef = \
+        calculate_impact_car_ef(year_range, country_data, baseline,
+                                types_u36, year_start_u36, year_end_u36, affected_area_u36)
+
+    # U3.7 ########################################
+
+    # Aggregating results ########################################
+    policy_quantification = {"bus": impact_bus_ef,
+                             "car": impact_car_ef,
+                             "metro": transport_impact_passenger_mobility["metro"],
+                             "tram": transport_impact_passenger_mobility["tram"],
+                             "train": transport_impact_passenger_mobility["train"],
+                             "rail_transport": transport_impact_freight["rail_transport"],
+                             "road_transport": transport_impact_freight["road_transport"],
+                             "waterways_transport": transport_impact_freight["waterways_transport"],
+                             "total": {}}
+
+    for year in year_range:
+        policy_quantification["total"][year] = policy_quantification["bus"][year] + \
+                                               policy_quantification["car"][year] + \
+                                               policy_quantification["metro"][year] + \
+                                               policy_quantification["tram"][year] + \
+                                               policy_quantification["train"][year] + \
+                                               policy_quantification["rail_transport"][year] + \
+                                               policy_quantification["road_transport"][year] + \
+                                               policy_quantification["waterways_transport"][year]
+
+    for transport_type in policy_quantification.keys():
+        for year in year_range:
+
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(policy_quantification[transport_type][year]):
+                policy_quantification[transport_type][year] = 0.0
+            else:
+                policy_quantification[transport_type][year] = round(
+                    policy_quantification[transport_type][year], 3)
+
+            if year < beginning_year:
+                policy_quantification[transport_type].pop(year, None)
+
+    return policy_quantification
 
 
 # NEW DEVELOPMENT - U3.1 ########################################
@@ -1810,26 +1934,36 @@ def calculate_final_v_in_tonne_km(year_range, country_data,
 # NEW DEVELOPMENT - U3.5 ########################################
 
 
-def calculate_impact_bus_ef(year_range, country_data,
-                            types_u35, year_start_u35, year_end_u35, affected_area_u35):
-    impact_bus_ef = {}
+def calculate_impact_bus_ef(year_range, country_data, baseline,
+                            types, year_start, year_end, affected_area):
+    baseline_emissions_bus = {}
 
-    init_propulsion_type = {"petrol", "lpg", "diesel", "cng", "electric"}
+    init_propulsion_type = {"petrol", "lpg", "cng", "electricity"}
 
     propulsion_share = {}
+    baseline_ef_street = {}
+    baseline_ef_road = {}
 
     for year in year_range:
         propulsion_share[year] = {}
+        baseline_ef_street[year] = {}
+        baseline_ef_road[year] = {}
 
         for prplsn_type in init_propulsion_type:
 
             if prplsn_type == "petrol":
                 propulsion_share[year][prplsn_type] = country_data.BUS_COL6.to_numpy()[0]
+                baseline_ef_street[year][prplsn_type] = country_data.BUS_COL16.to_numpy()[0]
+                baseline_ef_road[year][prplsn_type] = country_data.BUS_COL21.to_numpy()[0]
             elif prplsn_type == "lpg":
                 propulsion_share[year][prplsn_type] = country_data.BUS_COL7.to_numpy()[0]
+                baseline_ef_street[year][prplsn_type] = country_data.BUS_COL17.to_numpy()[0]
+                baseline_ef_road[year][prplsn_type] = country_data.BUS_COL22.to_numpy()[0]
             elif prplsn_type == "cng":
                 propulsion_share[year][prplsn_type] = country_data.BUS_COL9.to_numpy()[0]
-            elif prplsn_type == "electric":
+                baseline_ef_street[year][prplsn_type] = country_data.BUS_COL19.to_numpy()[0]
+                baseline_ef_road[year][prplsn_type] = country_data.BUS_COL24.to_numpy()[0]
+            elif prplsn_type == "electricity":
                 if year == 2021:
                     share_start_yr = country_data.BUS_COL26.to_numpy()[0]
                     share_end_yr = country_data.BUS_COL27.to_numpy()[0]
@@ -1872,25 +2006,285 @@ def calculate_impact_bus_ef(year_range, country_data,
                     propulsion_share[year][prplsn_type] = share_prev_year + \
                                                           (share_end_yr - share_start_yr) / 5
 
+                baseline_ef_street[year][prplsn_type] = country_data.BUS_COL20.to_numpy()[0]
+                baseline_ef_road[year][prplsn_type] = country_data.BUS_COL25.to_numpy()[0]
+
+    annual_change = {}
+
+    for prplsn_type in init_propulsion_type:
+        annual_change[prplsn_type] = {}
+
+        for year in year_range:
+            if year_start <= year <= year_end:
+                annual_change[prplsn_type][year] = (
+                    types[prplsn_type] - propulsion_share[year - 1][prplsn_type]) / \
+                                                  (year_end - year_start + 1)
+            else:
+                annual_change[prplsn_type][year] = 0
+
+    percent_with_u35_impact = {}
+
+    for prplsn_type in init_propulsion_type:
+        percent_with_u35_impact[prplsn_type] = {}
+
+        for year in year_range:
+            if year == 2021:
+                percent_with_u35_impact[prplsn_type][year] = \
+                    propulsion_share[year][prplsn_type] + annual_change[prplsn_type][year]
+            else:
+                if annual_change[prplsn_type][year] == 0:
+                    if propulsion_share[year - 1][prplsn_type] == 0:
+                        percent_with_u35_impact[prplsn_type][year] = \
+                            percent_with_u35_impact[prplsn_type][year - 1]
+                    else:
+                        percent_with_u35_impact[prplsn_type][year] = \
+                            percent_with_u35_impact[prplsn_type][year - 1] * \
+                            propulsion_share[year][prplsn_type] / \
+                            propulsion_share[year - 1][prplsn_type]
+                else:
+                    percent_with_u35_impact[prplsn_type][year] = \
+                        percent_with_u35_impact[prplsn_type][year - 1] + \
+                        annual_change[prplsn_type][year]
+
+    percent_with_u35_impact["diesel"] = {}
+
     for year in year_range:
-        propulsion_share[year]["diesel"] = 100 - (
-                propulsion_share[year]["petrol"] +
-                propulsion_share[year]["lpg"] +
-                propulsion_share[year]["cng"] +
-                propulsion_share[year]["electric"])
+        percent_with_u35_impact["diesel"][year] = 100 - (
+                percent_with_u35_impact["petrol"][year] +
+                percent_with_u35_impact["lpg"][year] +
+                percent_with_u35_impact["cng"][year] +
+                percent_with_u35_impact["electricity"][year])
 
-    # impact_on_share_of_fuel_type
-    #
-    # baseline_ef
-    #
-    # area_specific_ef
+        baseline_ef_street[year]["diesel"] = country_data.BUS_COL18.to_numpy()[0]
+        baseline_ef_road[year]["diesel"] = country_data.BUS_COL23.to_numpy()[0]
 
-    return impact_bus_ef
+    grid_electricity_emission_factor = calculate_grid_electricity_emission_factor(year_range,
+                                                                                  country_data)
+
+    ef_road = {}
+    ef_street = {}
+
+    for year in year_range:
+        ef_road[year] = 0
+        ef_street[year] = 0
+
+        for prplsn_type in percent_with_u35_impact.keys():
+
+            if prplsn_type == "electricity":
+                ef_road_pt = baseline_ef_road[year][prplsn_type] * \
+                             percent_with_u35_impact[prplsn_type][year] / 100 * \
+                             grid_electricity_emission_factor[year]
+
+                ef_street_pt = baseline_ef_street[year][prplsn_type] * \
+                               percent_with_u35_impact[prplsn_type][year] / 100 * \
+                               grid_electricity_emission_factor[year]
+            else:
+                ef_road_pt = baseline_ef_road[year][prplsn_type] * \
+                             percent_with_u35_impact[prplsn_type][year] / 100
+                ef_street_pt = baseline_ef_street[year][prplsn_type] * \
+                               percent_with_u35_impact[prplsn_type][year] / 100
+
+            ef_road[year] = ef_road[year] + ef_road_pt
+            ef_street[year] = ef_street[year] + ef_street_pt
+
+    share_road_driving = {"metropolitan_center": country_data.BUS_COL33.to_numpy()[0],
+                          "urban": country_data.BUS_COL35.to_numpy()[0],
+                          "suburban": country_data.BUS_COL37.to_numpy()[0],
+                          "town": country_data.BUS_COL39.to_numpy()[0],
+                          "rural": country_data.BUS_COL41.to_numpy()[0]}
+    share_street_driving = {"metropolitan_center": 100 - share_road_driving["metropolitan_center"],
+                            "urban": 100 - share_road_driving["urban"],
+                            "suburban": 100 - share_road_driving["suburban"],
+                            "town": 100 - share_road_driving["town"],
+                            "rural": 100 - share_road_driving["rural"]}
+
+    settlement_distribution = baseline["settlement_distribution"]
+
+    area_specific_ef_average = {}
+
+    for year in year_range:
+        area_specific_ef_average[year] = 0
+
+        for settlement_type in share_road_driving.keys():
+            area_specific_ef_average[year] = area_specific_ef_average[year] + (
+                    ef_road[year] * share_road_driving[settlement_type] / 100 +
+                    ef_street[year] * share_street_driving[settlement_type] / 100) * \
+                                             settlement_distribution[settlement_type] / 100
+
+    return area_specific_ef_average
 
 
+# NEW DEVELOPMENT - U3.6 ########################################
 
+def calculate_impact_car_ef(year_range, country_data, baseline,
+                            types, year_start, year_end, affected_area):
+    baseline_emissions_car = {}
 
+    share_road_driving = {"metropolitan_center": country_data.CAR_COL59.to_numpy()[0],
+                          "urban": country_data.CAR_COL60.to_numpy()[0],
+                          "suburban": country_data.CAR_COL61.to_numpy()[0],
+                          "town": country_data.CAR_COL62.to_numpy()[0],
+                          "rural": country_data.CAR_COL63.to_numpy()[0]}
+    share_street_driving = {}
+    for settlement_type in share_road_driving.keys():
+        share_street_driving[settlement_type] = 100 - share_road_driving[settlement_type]
 
+    propulsion_share = {}
+    baseline_ef_street = {}
+    baseline_ef_road = {}
+
+    for year in year_range:
+        propulsion_share[year] = {"lpg": country_data.CAR_COL9.to_numpy()[0],
+                                  "cng": country_data.CAR_COL10.to_numpy()[0],
+                                  "ngv": country_data.CAR_COL11.to_numpy()[0],
+                                  "petrol": country_data.CAR_COL12.to_numpy()[0],
+                                  "hep": country_data.CAR_COL13.to_numpy()[0],
+                                  "phev": country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "diesel": country_data.CAR_COL15.to_numpy()[0],
+                                  "hybrid_electric-diesel": country_data.CAR_COL16.to_numpy()[0],
+                                  "diesel_PHEV": country_data.CAR_COL17.to_numpy()[0] * 0.5,
+                                  "hydrogen_fuel": country_data.CAR_COL18.to_numpy()[0],
+                                  "bioethanol": country_data.CAR_COL19.to_numpy()[0],
+                                  "biodiesel": country_data.CAR_COL20.to_numpy()[0],
+                                  "bifuel": country_data.CAR_COL21.to_numpy()[0],
+                                  "other": country_data.CAR_COL22.to_numpy()[0],
+                                  "electricity": country_data.CAR_COL23.to_numpy()[0],
+                                  "electric_petrol_PHEV":
+                                      country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "electric_diesel_PHEV":
+                                      country_data.CAR_COL17.to_numpy()[0] * 0.5}
+
+        if year > 2021:
+            propulsion_share[year]["petrol"] = (
+                    propulsion_share[2021]["petrol"] /
+                    (propulsion_share[2021]["petrol"] + propulsion_share[2021]["diesel"])
+            ) * (100 - (sum(propulsion_share[year].values()) -
+                        (propulsion_share[year]["petrol"] + propulsion_share[year]["diesel"] +
+                         propulsion_share[year]["electric_petrol_PHEV"] +
+                         propulsion_share[year]["electric_diesel_PHEV"])))
+
+            propulsion_share[year]["diesel"] = (
+                    propulsion_share[2021]["diesel"] /
+                    (propulsion_share[2021]["petrol"] + propulsion_share[2021]["diesel"])
+            ) * (100 - (sum(propulsion_share[year].values()) -
+                        (propulsion_share[year]["petrol"] + propulsion_share[year]["diesel"] +
+                         propulsion_share[year]["electric_petrol_PHEV"] +
+                         propulsion_share[year]["electric_diesel_PHEV"])))
+
+        baseline_ef_road[year] = {"lpg": country_data.CAR_COL39.to_numpy()[0],
+                                  "cng": country_data.CAR_COL40.to_numpy()[0],
+                                  "ngv": country_data.CAR_COL41.to_numpy()[0],
+                                  "petrol": country_data.CAR_COL42.to_numpy()[0],
+                                  "hep": country_data.CAR_COL43.to_numpy()[0],
+                                  "phev": country_data.CAR_COL44.to_numpy()[0],
+                                  "diesel": country_data.CAR_COL45.to_numpy()[0],
+                                  "hybrid_electric-diesel": country_data.CAR_COL46.to_numpy()[0],
+                                  "diesel_PHEV": country_data.CAR_COL47.to_numpy()[0],
+                                  "hydrogen_fuel": country_data.CAR_COL48.to_numpy()[0],
+                                  "bioethanol": country_data.CAR_COL49.to_numpy()[0],
+                                  "biodiesel": country_data.CAR_COL50.to_numpy()[0],
+                                  "bifuel": country_data.CAR_COL51.to_numpy()[0],
+                                  "other": country_data.CAR_COL52.to_numpy()[0],
+                                  "electricity": country_data.CAR_COL53.to_numpy()[0],
+                                  "electric_petrol_PHEV": country_data.CAR_COL53.to_numpy()[0],
+                                  "electric_diesel_PHEV": country_data.CAR_COL53.to_numpy()[0]}
+
+        baseline_ef_street[year] = {"lpg": country_data.CAR_COL24.to_numpy()[0],
+                                    "cng": country_data.CAR_COL25.to_numpy()[0],
+                                    "ngv": country_data.CAR_COL26.to_numpy()[0],
+                                    "petrol": country_data.CAR_COL27.to_numpy()[0],
+                                    "hep": country_data.CAR_COL28.to_numpy()[0],
+                                    "phev": country_data.CAR_COL29.to_numpy()[0],
+                                    "diesel": country_data.CAR_COL30.to_numpy()[0],
+                                    "hybrid_electric-diesel": country_data.CAR_COL31.to_numpy()[0],
+                                    "diesel_PHEV": country_data.CAR_COL32.to_numpy()[0],
+                                    "hydrogen_fuel": country_data.CAR_COL33.to_numpy()[0],
+                                    "bioethanol": country_data.CAR_COL34.to_numpy()[0],
+                                    "biodiesel": country_data.CAR_COL35.to_numpy()[0],
+                                    "bifuel": country_data.CAR_COL36.to_numpy()[0],
+                                    "other": country_data.CAR_COL37.to_numpy()[0],
+                                    "electricity": country_data.CAR_COL38.to_numpy()[0],
+                                    "electric_petrol_PHEV": country_data.CAR_COL38.to_numpy()[0],
+                                    "electric_diesel_PHEV": country_data.CAR_COL38.to_numpy()[0]}
+
+    annual_change = {}
+
+    for prplsn_type in types.keys():
+        annual_change[prplsn_type] = {}
+
+        for year in year_range:
+            if year_start <= year <= year_end:
+                annual_change[prplsn_type][year] = (
+                    types[prplsn_type] - propulsion_share[year - 1][prplsn_type]) / \
+                                                  (year_end - year_start + 1)
+            else:
+                annual_change[prplsn_type][year] = 0
+
+        # Elements missing in UI so setting ZERO
+        annual_change["hybrid_electric-diesel"] = {}
+        annual_change["diesel_PHEV"] = {}
+        annual_change["electric_petrol_PHEV"] = {}
+        annual_change["electric_diesel_PHEV"] = {}
+        for year in year_range:
+            annual_change["hybrid_electric-diesel"][year] = 0
+            annual_change["diesel_PHEV"][year] = 0
+            annual_change["electric_petrol_PHEV"][year] = 0
+            annual_change["electric_diesel_PHEV"][year] = 0
+
+    percent_with_u36_impact = {}
+
+    for prplsn_type in annual_change.keys():
+        percent_with_u36_impact[prplsn_type] = {}
+
+        for year in year_range:
+            if year == 2021:
+                percent_with_u36_impact[prplsn_type][year] = \
+                    propulsion_share[year][prplsn_type] + annual_change[prplsn_type][year]
+            else:
+                if annual_change[prplsn_type][year] == 0:
+                    if propulsion_share[year - 1][prplsn_type] == 0:
+                        percent_with_u36_impact[prplsn_type][year] = \
+                            percent_with_u36_impact[prplsn_type][year - 1]
+                    else:
+                        percent_with_u36_impact[prplsn_type][year] = \
+                            percent_with_u36_impact[prplsn_type][year - 1] * \
+                            propulsion_share[year][prplsn_type] / \
+                            propulsion_share[year - 1][prplsn_type]
+                else:
+                    percent_with_u36_impact[prplsn_type][year] = \
+                        percent_with_u36_impact[prplsn_type][year - 1] + \
+                        annual_change[prplsn_type][year]
+
+    ef_road = {}
+    ef_street = {}
+
+    for year in year_range:
+        ef_road[year] = 0
+        ef_street[year] = 0
+
+        for prplsn_type in propulsion_share[year].keys():
+            ef_road_pt = baseline_ef_road[year][prplsn_type] * \
+                         percent_with_u36_impact[prplsn_type][year] / 100
+            ef_street_pt = baseline_ef_street[year][prplsn_type] * \
+                           percent_with_u36_impact[prplsn_type][year] / 100
+
+            ef_road[year] = ef_road[year] + ef_road_pt
+            ef_street[year] = ef_street[year] + ef_street_pt
+
+    settlement_distribution = baseline["settlement_distribution"]
+
+    area_specific_ef_average = {}
+
+    for year in year_range:
+        area_specific_ef_average[year] = 0
+
+        for settlement_type in share_road_driving.keys():
+            area_specific_ef_average[year] = area_specific_ef_average[year] + (
+                    ef_road[year] * share_road_driving[settlement_type] / 100 +
+                    ef_street[year] * share_street_driving[settlement_type] / 100) * \
+                                             settlement_distribution[settlement_type] / 100
+
+    return area_specific_ef_average
 
 
 
