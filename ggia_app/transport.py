@@ -178,13 +178,27 @@ def route_transport():
 
     # Removing years prior to selected year - QUALITY QUANTIFICATION
 
+    # FOR TESTING FRONT END -- START
+    dummy_data = new_development_response["impact"]["emissions"]
+    dummy_data["total"] = {}
+
+    i = 0
+    for ptype in dummy_data.keys():
+        if i == 0:
+            for year in list(dummy_data[ptype]):
+                dummy_data["total"][year] = dummy_data[ptype][year]
+            i += 1
+        else:
+            for year in list(dummy_data[ptype]):
+                dummy_data["total"][year] = dummy_data["total"][year] + dummy_data[ptype][year]
+    # FOR TESTING FRONT END -- END
+
     return {
         "status": "success",
         "data": {
             "baseline": baseline_response,
             "new_development": new_development_response,
-            # "policy_quantification": policy_quantification_response
-            "policy_quantification": new_development_response["impact"]["emissions"]
+            "policy_quantification": dummy_data
         }
     }
 
@@ -1864,8 +1878,6 @@ def calculate_impact_bus_ef(year_range, country_data,
                 propulsion_share[year]["lpg"] +
                 propulsion_share[year]["cng"] +
                 propulsion_share[year]["electric"])
-
-    print("!")
 
     # impact_on_share_of_fuel_type
     #
