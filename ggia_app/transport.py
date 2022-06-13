@@ -1493,7 +1493,7 @@ def calculate_policy_quantification(baseline, policy_quantification,
         year_start_u35 = year_end_u35
         year_end_u35 = tmp
 
-    baseline_emissions_bus = \
+    impact_bus_ef = \
         calculate_impact_bus_ef(year_range, country_data, baseline,
                                 types_u35, year_start_u35, year_end_u35, affected_area_u35)
 
