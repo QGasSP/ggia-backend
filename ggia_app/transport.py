@@ -1407,11 +1407,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u31 = passenger_mobility["year_end"]
 
     if year_start_u31 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U3.1) is larger than baseline start year."
         }
     if year_end_u31 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U3.1) is smalled than baseline start year."
         }
 
@@ -1433,11 +1433,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u32 = freight_transport["year_end"]
 
     if year_start_u32 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U 3.2) is larger than baseline start year."
         }
     if year_end_u32 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U 3.2) is smaller than baseline start year."
         }
 
@@ -1459,11 +1459,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u33 = modal_split_passenger["year_end"]
 
     if year_start_u33 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U 3.3) is larger than baseline start year."
         }
     if year_end_u33 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U 3.3) is smaller than baseline start year."
         }
 
@@ -1486,11 +1486,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u34 = modal_split_freight["year_end"]
 
     if year_start_u34 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U 3.4) is larger than baseline start year."
         }
     if year_end_u34 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U 3.4) is smaller than baseline start year."
         }
 
@@ -1513,11 +1513,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     affected_area_u35 = fuel_shares_bus["affected_area"]
 
     if year_start_u35 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U 3.5) is larger than baseline start year."
         }
     if year_end_u35 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U 3.5) is smaller than baseline start year."
         }
 
@@ -1539,11 +1539,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
     affected_area_u36 = fuel_shares_car["affected_area"]
 
     if year_start_u36 > beginning_year:
-        return {}, {
+        return {
             "message": "Start year (in U 3.6) is larger than baseline start year."
         }
     if year_end_u36 < beginning_year:
-        return {}, {
+        return {
             "message": "End year (in U 3.6) is smaller than baseline start year."
         }
 
