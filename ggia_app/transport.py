@@ -37,19 +37,19 @@ def route_baseline():
             "status": "invalid",
             "messages": baseline_response["message"]
         }
-    else:
-        # Removing years prior to selected year - BASELINE
-        for ptype in baseline_response["projections"].keys():
-            for year in list(baseline_response["projections"][ptype]):
-                if year < selected_year:
-                    baseline_response["projections"][ptype].pop(year, None)
 
-        return {
-            "status": "success",
-            "data": {
-                "baseline": baseline_response
-            }
+    # Removing years prior to selected year - BASELINE
+    for ptype in baseline_response["projections"].keys():
+        for year in list(baseline_response["projections"][ptype]):
+            if year < selected_year:
+                baseline_response["projections"][ptype].pop(year, None)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_response
         }
+    }
 
 
 @blue_print.route("new-development", methods=["GET", "POST"])
@@ -79,51 +79,49 @@ def route_new_development():
             "status": "invalid",
             "messages": baseline_response["message"]
         }
-    else:
-        # Removing years prior to selected year - BASELINE
-        for ptype in baseline_response["projections"].keys():
-            for year in list(baseline_response["projections"][ptype]):
-                if year < selected_year:
-                    baseline_response["projections"][ptype].pop(year, None)
 
-        _, new_development_response = calculate_new_development(baseline,
-                                                                baseline_response["projections"],
-                                                                baseline_v,
-                                                                new_development)
+    _, new_development_response = calculate_new_development(baseline,
+                                                            baseline_response["projections"],
+                                                            baseline_v,
+                                                            new_development)
 
-        if "message" in new_development_response:
-            return {
-                "status": "invalid",
-                "messages": new_development_response["message"]
-            }
-        else:
-            # Removing years prior to selected year - NEW DEVELOPMENT
-            if new_development_response:
-                for year in list(new_development_response["impact"]["new_residents"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["new_residents"].pop(year, None)
+    if "message" in new_development_response:
+        return {
+            "status": "invalid",
+            "messages": new_development_response["message"]
+        }
 
-                for year in list(new_development_response["impact"]["population"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["population"].pop(year, None)
+    # Removing years prior to selected year - BASELINE
+    for ptype in baseline_response["projections"].keys():
+        for year in list(baseline_response["projections"][ptype]):
+            if year < selected_year:
+                baseline_response["projections"][ptype].pop(year, None)
 
-                for year in list(new_development_response["impact"]["settlement_distribution"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["settlement_distribution"].pop(year,
-                                                                                          None)
+    for year in list(new_development_response["impact"]["new_residents"]):
+        if year < selected_year:
+            new_development_response["impact"]["new_residents"].pop(year, None)
 
-                for ptype in new_development_response["impact"]["emissions"].keys():
-                    for year in list(new_development_response["impact"]["emissions"][ptype]):
-                        if year < selected_year:
-                            new_development_response["impact"]["emissions"][ptype].pop(year, None)
+    for year in list(new_development_response["impact"]["population"]):
+        if year < selected_year:
+            new_development_response["impact"]["population"].pop(year, None)
 
-            return {
-                "status": "success",
-                "data": {
-                    "baseline": baseline_response,
-                    "new_development": new_development_response
-                }
-            }
+    for year in list(new_development_response["impact"]["settlement_distribution"]):
+        if year < selected_year:
+            new_development_response["impact"]["settlement_distribution"].pop(year,
+                                                                              None)
+
+    for ptype in new_development_response["impact"]["emissions"].keys():
+        for year in list(new_development_response["impact"]["emissions"][ptype]):
+            if year < selected_year:
+                new_development_response["impact"]["emissions"][ptype].pop(year, None)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_response,
+            "new_development": new_development_response
+        }
+    }
 
 
 @blue_print.route("", methods=["GET", "POST"])
@@ -152,65 +150,63 @@ def route_transport():
             "status": "invalid",
             "messages": baseline_response["message"]
         }
-    else:
-        # Removing years prior to selected year - BASELINE
-        for ptype in baseline_response["projections"].keys():
-            for year in list(baseline_response["projections"][ptype]):
-                if year < selected_year:
-                    baseline_response["projections"][ptype].pop(year, None)
 
-        weighted_cf_by_transport_year, new_development_response = \
-            calculate_new_development(baseline,
-                                      baseline_response["projections"],
-                                      baseline_v,
-                                      new_development)
+    weighted_cf_by_transport_year, new_development_response = \
+        calculate_new_development(baseline,
+                                  baseline_response["projections"],
+                                  baseline_v,
+                                  new_development)
 
-        if "message" in new_development_response:
-            return {
-                "status": "invalid",
-                "messages": new_development_response["message"]
-            }
-        else:
-            # Removing years prior to selected year - NEW DEVELOPMENT
-            if new_development_response:
-                for year in list(new_development_response["impact"]["new_residents"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["new_residents"].pop(year, None)
+    if "message" in new_development_response:
+        return {
+            "status": "invalid",
+            "messages": new_development_response["message"]
+        }
 
-                for year in list(new_development_response["impact"]["population"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["population"].pop(year, None)
+    policy_quantification_response = \
+        calculate_policy_quantification(baseline, policy_quantification,
+                                        baseline_response,
+                                        new_development_response,
+                                        weighted_cf_by_transport_year)
 
-                for year in list(new_development_response["impact"]["settlement_distribution"]):
-                    if year < selected_year:
-                        new_development_response["impact"]["settlement_distribution"].pop(year,
-                                                                                          None)
+    if "message" in policy_quantification_response:
+        return {
+            "status": "invalid",
+            "messages": policy_quantification_response["message"]
+        }
 
-                for ptype in new_development_response["impact"]["emissions"].keys():
-                    for year in list(new_development_response["impact"]["emissions"][ptype]):
-                        if year < selected_year:
-                            new_development_response["impact"]["emissions"][ptype].pop(year, None)
+    # Removing years prior to selected year - BASELINE
+    for ptype in baseline_response["projections"].keys():
+        for year in list(baseline_response["projections"][ptype]):
+            if year < selected_year:
+                baseline_response["projections"][ptype].pop(year, None)
 
-                policy_quantification_response = \
-                    calculate_policy_quantification(baseline, policy_quantification,
-                                                    baseline_response,
-                                                    new_development_response,
-                                                    weighted_cf_by_transport_year)
+    for year in list(new_development_response["impact"]["new_residents"]):
+        if year < selected_year:
+            new_development_response["impact"]["new_residents"].pop(year, None)
 
-                if "message" in policy_quantification_response:
-                    return {
-                        "status": "invalid",
-                        "messages": policy_quantification_response["message"]
-                    }
-                else:
-                    return {
-                        "status": "success",
-                        "data": {
-                            "baseline": baseline_response,
-                            "new_development": new_development_response,
-                            "policy_quantification": policy_quantification_response
-                        }
-                    }
+    for year in list(new_development_response["impact"]["population"]):
+        if year < selected_year:
+            new_development_response["impact"]["population"].pop(year, None)
+
+    for year in list(new_development_response["impact"]["settlement_distribution"]):
+        if year < selected_year:
+            new_development_response["impact"]["settlement_distribution"].pop(year,
+                                                                              None)
+
+    for ptype in new_development_response["impact"]["emissions"].keys():
+        for year in list(new_development_response["impact"]["emissions"][ptype]):
+            if year < selected_year:
+                new_development_response["impact"]["emissions"][ptype].pop(year, None)
+
+    return {
+        "status": "success",
+        "data": {
+            "baseline": baseline_response,
+            "new_development": new_development_response,
+            "policy_quantification": policy_quantification_response
+        }
+    }
 
 
 # BASELINE ########################################
@@ -1248,23 +1244,14 @@ def calculate_residents_after_new_development(year_range, country_data, new_resi
         else:
             if 2021 <= year <= 2030:
                 if year != 2021:  # Skip 2021
-                    if (year - 1) in residents:
-                        residents[year] = math.ceil(
-                            residents[year - 1] * (100 + annual_change_2020_2030) / 100)
-                    else:
-                        residents[year] = 0
+                    residents[year] = math.ceil(
+                        residents[year - 1] * (100 + annual_change_2020_2030) / 100)
             elif 2031 <= year <= 2040:
-                if (year - 1) in residents:
-                    residents[year] = math.ceil(
-                        residents[year - 1] * (100 + annual_change_2030_2040) / 100)
-                else:
-                    residents[year] = 0
+                residents[year] = math.ceil(
+                    residents[year - 1] * (100 + annual_change_2030_2040) / 100)
             elif 2041 <= year <= 2050:
-                if (year - 1) in residents:
-                    residents[year] = math.ceil(
-                        residents[year - 1] * (100 + annual_change_2040_2050) / 100)
-                else:
-                    residents[year] = 0
+                residents[year] = math.ceil(
+                    residents[year - 1] * (100 + annual_change_2040_2050) / 100)
 
     return residents
 
@@ -1305,7 +1292,6 @@ def calculate_weighted_correction_factors(year_range, old_population_by_year,
         weighted_cf_by_transport_year[transport_type] = {}
 
         for year in year_range:
-
             if new_population_by_year[year] == 0:
                 weighted_cf_by_transport_year[transport_type][year] = 0
             else:
@@ -1406,13 +1392,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u31 = passenger_mobility["year_start"]
     year_end_u31 = passenger_mobility["year_end"]
 
-    if year_start_u31 > beginning_year:
+    if year_start_u31 < beginning_year:
         return {
-            "message": "Start year (in U3.1) is larger than baseline start year."
-        }
-    if year_end_u31 < beginning_year:
-        return {
-            "message": "End year (in U3.1) is smalled than baseline start year."
+            "message": "Start year (in passenger mobility) is smaller than baseline start year."
         }
 
     if year_start_u31 > year_end_u31:
@@ -1432,13 +1414,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u32 = freight_transport["year_start"]
     year_end_u32 = freight_transport["year_end"]
 
-    if year_start_u32 > beginning_year:
+    if year_start_u32 < beginning_year:
         return {
-            "message": "Start year (in U 3.2) is larger than baseline start year."
-        }
-    if year_end_u32 < beginning_year:
-        return {
-            "message": "End year (in U 3.2) is smaller than baseline start year."
+            "message": "Start year (in freight transport) is smaller than baseline start year."
         }
 
     if year_start_u32 > year_end_u32:
@@ -1458,13 +1436,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u33 = modal_split_passenger["year_start"]
     year_end_u33 = modal_split_passenger["year_end"]
 
-    if year_start_u33 > beginning_year:
+    if year_start_u33 < beginning_year:
         return {
-            "message": "Start year (in U 3.3) is larger than baseline start year."
-        }
-    if year_end_u33 < beginning_year:
-        return {
-            "message": "End year (in U 3.3) is smaller than baseline start year."
+            "message": "Start year (in modal split passenger) is smaller than baseline start year."
         }
 
     if year_start_u33 > year_end_u33:
@@ -1485,13 +1459,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u34 = modal_split_freight["year_start"]
     year_end_u34 = modal_split_freight["year_end"]
 
-    if year_start_u34 > beginning_year:
+    if year_start_u34 < beginning_year:
         return {
-            "message": "Start year (in U 3.4) is larger than baseline start year."
-        }
-    if year_end_u34 < beginning_year:
-        return {
-            "message": "End year (in U 3.4) is smaller than baseline start year."
+            "message": "Start year (in modal split freight) is smaller than baseline start year."
         }
 
     if year_start_u34 > year_end_u34:
@@ -1512,13 +1482,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u35 = fuel_shares_bus["year_end"]
     affected_area_u35 = fuel_shares_bus["affected_area"]
 
-    if year_start_u35 > beginning_year:
+    if year_start_u35 < beginning_year:
         return {
-            "message": "Start year (in U 3.5) is larger than baseline start year."
-        }
-    if year_end_u35 < beginning_year:
-        return {
-            "message": "End year (in U 3.5) is smaller than baseline start year."
+            "message": "Start year (in fuel shares bus) is smaller than baseline start year."
         }
 
     if year_start_u35 > year_end_u35:
@@ -1527,10 +1493,11 @@ def calculate_policy_quantification(baseline, policy_quantification,
         year_start_u35 = year_end_u35
         year_end_u35 = tmp
 
-    impact_bus_ef = \
+    baseline_emissions_bus = \
         calculate_impact_bus_ef(year_range, country_data, baseline,
                                 types_u35, year_start_u35, year_end_u35, affected_area_u35)
 
+    # impact_bus_ef
     # U3.6 ########################################
     fuel_shares_car = policy_quantification["fuel_shares_car"]
     types_u36 = fuel_shares_car["types"]
@@ -1538,13 +1505,9 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u36 = fuel_shares_car["year_end"]
     affected_area_u36 = fuel_shares_car["affected_area"]
 
-    if year_start_u36 > beginning_year:
+    if year_start_u36 < beginning_year:
         return {
-            "message": "Start year (in U 3.6) is larger than baseline start year."
-        }
-    if year_end_u36 < beginning_year:
-        return {
-            "message": "End year (in U 3.6) is smaller than baseline start year."
+            "message": "Start year (in fuel shares car) is smaller than baseline start year."
         }
 
     if year_start_u36 > year_end_u36:
@@ -1684,7 +1647,6 @@ def calculate_u31_reduction_percentage(year_range, expected_change, year_start, 
                         expected_change / (year_end - year_start + 1))
             else:
                 u31_reduction_percentage[year] = u31_reduction_percentage[year - 1]
-
     return u31_reduction_percentage
 
 
@@ -2097,9 +2059,8 @@ def calculate_impact_bus_ef(year_range, country_data, baseline,
         for year in year_range:
             if year_start <= year <= year_end:
                 annual_change[prplsn_type][year] = (
-                                                           types[prplsn_type] -
-                                                           propulsion_share[year - 1][
-                                                               prplsn_type]) / \
+                               types[prplsn_type] -
+                               propulsion_share[year - 1][prplsn_type]) / \
                                                    (year_end - year_start + 1)
             else:
                 annual_change[prplsn_type][year] = 0
@@ -2225,7 +2186,7 @@ def calculate_impact_car_ef(year_range, country_data, baseline,
                                   "diesel": country_data.CAR_COL15.to_numpy()[0],
                                   "hybrid_electric-diesel": country_data.CAR_COL16.to_numpy()[0],
                                   "diesel_PHEV": country_data.CAR_COL17.to_numpy()[0] * 0.5,
-                                  "hydrogen_fuel": country_data.CAR_COL18.to_numpy()[0],
+                                  "hydrogenfuel": country_data.CAR_COL18.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL19.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL20.to_numpy()[0],
                                   "bifuel": country_data.CAR_COL21.to_numpy()[0],
@@ -2270,7 +2231,7 @@ def calculate_impact_car_ef(year_range, country_data, baseline,
                                   "diesel": country_data.CAR_COL45.to_numpy()[0],
                                   "hybrid_electric-diesel": country_data.CAR_COL46.to_numpy()[0],
                                   "diesel_PHEV": country_data.CAR_COL47.to_numpy()[0],
-                                  "hydrogen_fuel": country_data.CAR_COL48.to_numpy()[0],
+                                  "hydrogenfuel": country_data.CAR_COL48.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL49.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL50.to_numpy()[0],
                                   "bifuel": country_data.CAR_COL51.to_numpy()[0],
@@ -2288,7 +2249,7 @@ def calculate_impact_car_ef(year_range, country_data, baseline,
                                     "diesel": country_data.CAR_COL30.to_numpy()[0],
                                     "hybrid_electric-diesel": country_data.CAR_COL31.to_numpy()[0],
                                     "diesel_PHEV": country_data.CAR_COL32.to_numpy()[0],
-                                    "hydrogen_fuel": country_data.CAR_COL33.to_numpy()[0],
+                                    "hydrogenfuel": country_data.CAR_COL33.to_numpy()[0],
                                     "bioethanol": country_data.CAR_COL34.to_numpy()[0],
                                     "biodiesel": country_data.CAR_COL35.to_numpy()[0],
                                     "bifuel": country_data.CAR_COL36.to_numpy()[0],
