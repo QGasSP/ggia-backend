@@ -14,6 +14,33 @@ blue_print = Blueprint("transport", __name__, url_prefix="/api/v1/calculate/tran
 
 # ROUTES ########################################
 
+@blue_print.route("metro-tram-list", methods=["GET", "POST"])
+def route_metro_tram_list():
+    request_body = humps.decamelize(request.json)
+    metro_tram_request_schema = MetroTramList()
+    metro_tram_request = request_body.get("metro_tram_list", -1)
+
+    try:
+        metro_tram_request_schema.load(metro_tram_request)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    metro_city_list, tram_city_list = generate_metro_tram_list(metro_tram_request)
+
+    return {
+        "status": "success",
+        "data": {
+            "metro_tram_list": {
+                "metro_list": metro_city_list,
+                "tram_list": tram_city_list
+            }
+        }
+    }
+
+
 @blue_print.route("baseline", methods=["GET", "POST"])
 def route_baseline():
     request_body = humps.decamelize(request.json)
@@ -207,6 +234,44 @@ def route_transport():
             "policy_quantification": policy_quantification_response
         }
     }
+
+
+# METRO TRAM LIST ########################################
+
+
+def generate_metro_tram_list(metro_tram_request):
+    metro_city_list = {}
+    tram_city_list = {}
+
+    country = metro_tram_request["country"]
+
+    df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
+                     skiprows=7)  # Skipping first 7 lines to ensure headers are correct
+    df.fillna(0, inplace=True)
+
+    country_data = df.loc[df["country"] == country]
+
+    metro_min_col_idx = 7
+    metro_col_count = 7
+    for i in range(metro_min_col_idx, metro_min_col_idx + metro_col_count):
+        metro_key_name = "metro_"
+        metro_col_name = "METRO_COL"
+        metro_col_name1 = metro_col_name + str(i)
+        metro_col_value1 = country_data[metro_col_name1].to_numpy()[0]
+        if metro_col_value1 != "no metro" and metro_col_value1 != "-":
+            metro_city_list[metro_key_name + str(i - metro_min_col_idx + 1)] = metro_col_value1
+
+    tram_min_col_idx = 7
+    tram_col_count = 58
+    for j in range(tram_min_col_idx, tram_min_col_idx + tram_col_count):
+        tram_key_name = "tram_"
+        tram_col_name = "TRAM_COL"
+        tram_col_name1 = tram_col_name + str(j)
+        tram_col_value1 = country_data[tram_col_name1].to_numpy()[0]
+        if tram_col_value1 != "no trams" and tram_col_value1 != "-":
+            tram_city_list[tram_key_name + str(j - tram_min_col_idx + 1)] = tram_col_value1
+
+    return metro_city_list, tram_city_list
 
 
 # BASELINE ########################################
