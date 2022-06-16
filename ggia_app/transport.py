@@ -14,6 +14,33 @@ blue_print = Blueprint("transport", __name__, url_prefix="/api/v1/calculate/tran
 
 # ROUTES ########################################
 
+@blue_print.route("metro-tram-list", methods=["GET", "POST"])
+def route_metro_tram_list():
+    request_body = humps.decamelize(request.json)
+    metro_tram_request_schema = MetroTramList()
+    metro_tram_request = request_body.get("metro_tram_list", -1)
+
+    try:
+        metro_tram_request_schema.load(metro_tram_request)
+    except ValidationError as err:
+        return {
+                   "status": "invalid",
+                   "messages": err.messages
+               }, 400
+
+    metro_city_list, tram_city_list = generate_metro_tram_list(metro_tram_request)
+
+    return {
+        "status": "success",
+        "data": {
+            "metro_tram_list": {
+                "metro_list": metro_city_list,
+                "tram_list": tram_city_list
+            }
+        }
+    }
+
+
 @blue_print.route("baseline", methods=["GET", "POST"])
 def route_baseline():
     request_body = humps.decamelize(request.json)
@@ -207,6 +234,44 @@ def route_transport():
             "policy_quantification": policy_quantification_response
         }
     }
+
+
+# METRO TRAM LIST ########################################
+
+
+def generate_metro_tram_list(metro_tram_request):
+    metro_city_list = {}
+    tram_city_list = {}
+
+    country = metro_tram_request["country"]
+
+    df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
+                     skiprows=7)  # Skipping first 7 lines to ensure headers are correct
+    df.fillna(0, inplace=True)
+
+    country_data = df.loc[df["country"] == country]
+
+    metro_min_col_idx = 7
+    metro_col_count = 7
+    for i in range(metro_min_col_idx, metro_min_col_idx + metro_col_count):
+        metro_key_name = "metro_"
+        metro_col_name = "METRO_COL"
+        metro_col_name1 = metro_col_name + str(i)
+        metro_col_value1 = country_data[metro_col_name1].to_numpy()[0]
+        if metro_col_value1 != "no metro" and metro_col_value1 != "-":
+            metro_city_list[metro_key_name + str(i - metro_min_col_idx + 1)] = metro_col_value1
+
+    tram_min_col_idx = 7
+    tram_col_count = 58
+    for j in range(tram_min_col_idx, tram_min_col_idx + tram_col_count):
+        tram_key_name = "tram_"
+        tram_col_name = "TRAM_COL"
+        tram_col_name1 = tram_col_name + str(j)
+        tram_col_value1 = country_data[tram_col_name1].to_numpy()[0]
+        if tram_col_value1 != "no trams" and tram_col_value1 != "-":
+            tram_city_list[tram_key_name + str(j - tram_min_col_idx + 1)] = tram_col_value1
+
+    return metro_city_list, tram_city_list
 
 
 # BASELINE ########################################
@@ -1493,11 +1558,18 @@ def calculate_policy_quantification(baseline, policy_quantification,
         year_start_u35 = year_end_u35
         year_end_u35 = tmp
 
-    impact_bus_ef = \
+    baseline_emissions_bus = \
         calculate_impact_bus_ef(year_range, country_data, baseline,
                                 types_u35, year_start_u35, year_end_u35, affected_area_u35)
 
-    # impact_bus_ef
+    impact_bus_ef = {}
+    bus_occupancy_rate = country_data.BUS_COL2.to_numpy()[0]
+
+    for year in year_range:
+        impact_bus_ef[year] = \
+            transport_impact_passenger_mobility["bus"][year] / bus_occupancy_rate * \
+            baseline_emissions_bus[year] / 1000
+
     # U3.6 ########################################
     fuel_shares_car = policy_quantification["fuel_shares_car"]
     types_u36 = fuel_shares_car["types"]
@@ -1516,47 +1588,56 @@ def calculate_policy_quantification(baseline, policy_quantification,
         year_start_u36 = year_end_u36
         year_end_u36 = tmp
 
-    impact_car_ef = \
+    baseline_emissions_car = \
         calculate_impact_car_ef(year_range, country_data, baseline,
                                 types_u36, year_start_u36, year_end_u36, affected_area_u36)
+
+    impact_car_ef = {}
+    car_occupancy_rate = country_data.CAR_COL2.to_numpy()[0]
+
+    for year in year_range:
+        impact_car_ef[year] = \
+            transport_impact_passenger_mobility["car"][year] / car_occupancy_rate * \
+            baseline_emissions_car[year] / 1000
 
     # U3.7 ########################################
 
     # Aggregating results ########################################
-    policy_quantification = {"bus": impact_bus_ef,
-                             "car": impact_car_ef,
-                             "metro": transport_impact_passenger_mobility["metro"],
-                             "tram": transport_impact_passenger_mobility["tram"],
-                             "train": transport_impact_passenger_mobility["train"],
-                             "rail_transport": transport_impact_freight["rail_transport"],
-                             "road_transport": transport_impact_freight["road_transport"],
-                             "waterways_transport": transport_impact_freight["waterways_transport"],
-                             "total": {}}
+    policy_quantification_response = {
+        "bus": impact_bus_ef,
+        "car": impact_car_ef,
+        "metro": transport_impact_passenger_mobility["metro"],
+        "tram": transport_impact_passenger_mobility["tram"],
+        "train": transport_impact_passenger_mobility["train"],
+        "rail_transport": transport_impact_freight["rail_transport"],
+        "road_transport": transport_impact_freight["road_transport"],
+        "waterways_transport": transport_impact_freight["waterways_transport"],
+        "total": {}}
 
     for year in year_range:
-        policy_quantification["total"][year] = policy_quantification["bus"][year] + \
-                                               policy_quantification["car"][year] + \
-                                               policy_quantification["metro"][year] + \
-                                               policy_quantification["tram"][year] + \
-                                               policy_quantification["train"][year] + \
-                                               policy_quantification["rail_transport"][year] + \
-                                               policy_quantification["road_transport"][year] + \
-                                               policy_quantification["waterways_transport"][year]
+        policy_quantification_response["total"][year] = \
+            policy_quantification_response["bus"][year] + \
+            policy_quantification_response["car"][year] + \
+            policy_quantification_response["tram"][year] + \
+            policy_quantification_response["train"][year] + \
+            policy_quantification_response["rail_transport"][year] + \
+            policy_quantification_response["road_transport"][year] + \
+            policy_quantification_response["waterways_transport"][year]
 
-    for transport_type in policy_quantification.keys():
+    for transport_type in policy_quantification_response.keys():
         for year in year_range:
 
             # Replacing NANs (if any) with ZEROs
-            if math.isnan(policy_quantification[transport_type][year]):
-                policy_quantification[transport_type][year] = 0.0
+            if math.isnan(policy_quantification_response[transport_type][year]):
+                policy_quantification_response[transport_type][year] = 0.0
             else:
-                policy_quantification[transport_type][year] = round(
-                    policy_quantification[transport_type][year], 3)
+                policy_quantification_response[transport_type][year] = round(
+                    policy_quantification_response[transport_type][year], 3)
 
             if year < beginning_year:
-                policy_quantification[transport_type].pop(year, None)
+                policy_quantification_response[transport_type].pop(year, None)
 
-    return policy_quantification
+    return policy_quantification_response
 
 
 # NEW DEVELOPMENT - U3.1 ########################################
