@@ -281,6 +281,8 @@ def calculate_baseline(baseline):
     population = baseline["population"]
     selected_year = baseline["year"]
     settlement_distribution = baseline["settlement_distribution"]
+    metro_split = baseline["metro_split"]
+    tram_split = baseline["tram_split"]
 
     year_range = list(range(2021, 2051))
 
@@ -304,7 +306,7 @@ def calculate_baseline(baseline):
     population_by_year = calculate_population(population, selected_year, country_data)
 
     baseline_v, projections = calculate_baseline_emissions(year_range, settlement_distribution,
-                                                           country_data,
+                                                           metro_split, tram_split, country_data,
                                                            population_by_year,
                                                            grid_electricity_emission_factor)
 
@@ -389,7 +391,8 @@ def calculate_population(initialized_population, initialized_year, country_data)
     return population
 
 
-def calculate_baseline_emissions(year_range, settlement_distribution, country_data,
+def calculate_baseline_emissions(year_range, settlement_distribution,
+                                 metro_split, tram_split, country_data,
                                  population_by_year,
                                  grid_electricity_emission_factor):
     """
@@ -413,7 +416,8 @@ def calculate_baseline_emissions(year_range, settlement_distribution, country_da
 
     for transport_type in transport_modes:
         baseline_v[transport_type] = \
-            calculate_baseline_v(year_range, country_data, transport_type, correction_factor)
+            calculate_baseline_v(year_range, metro_split, tram_split,
+                                 country_data, transport_type, correction_factor)
         if transport_type == "bus":
             baseline_emissions[transport_type] = \
                 calculate_baseline_emissions_bus(country_data,
@@ -543,7 +547,8 @@ def calculate_correction_factors(transport_mode_weights, settlement_distribution
     return correction_factor
 
 
-def calculate_baseline_v(year_range, country_data, transport_type, correction_factor):
+def calculate_baseline_v(year_range, metro_split, tram_split,
+                         country_data, transport_type, correction_factor):
     baseline_v = {}
 
     if transport_type == "bus":
@@ -633,7 +638,8 @@ def calculate_baseline_v(year_range, country_data, transport_type, correction_fa
         percent_metro_input = {}
 
         for city in metro_activity_by_city.keys():
-            percent_metro_input[city] = 100  # Set 100 by default | Will be user input
+            if city.lower() in map(str.lower, metro_split.keys()):
+                percent_metro_input[city] = metro_split[city.lower()]
 
         for year in year_range:
             if year == 2021:
@@ -670,7 +676,8 @@ def calculate_baseline_v(year_range, country_data, transport_type, correction_fa
         percent_tram_input = {}
 
         for city in tram_activity_by_city.keys():
-            percent_tram_input[city] = 100  # Set 100 by default | Will be user input
+            if city.lower() in map(str.lower, tram_split.keys()):
+                percent_tram_input[city] = tram_split[city.lower()]
 
         for year in year_range:
             if year == 2021:
@@ -851,83 +858,92 @@ def calculate_baseline_emissions_car(country_data, settlement_distribution, base
         propulsion_share[year] = {"lpg": country_data.CAR_COL9.to_numpy()[0],
                                   "cng": country_data.CAR_COL10.to_numpy()[0],
                                   "ngv": country_data.CAR_COL11.to_numpy()[0],
+
                                   "petrol": country_data.CAR_COL12.to_numpy()[0],
-                                  "hybrid_electric-petrol": country_data.CAR_COL13.to_numpy()[0],
-                                  "petrol_PHEV": country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "p_e_hybrid": country_data.CAR_COL13.to_numpy()[0],
+                                  "p_e_phev": country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "electricity_p_e_phev":
+                                      country_data.CAR_COL14.to_numpy()[0] * 0.5,
+
                                   "diesel": country_data.CAR_COL15.to_numpy()[0],
-                                  "hybrid_electric-diesel": country_data.CAR_COL16.to_numpy()[0],
-                                  "diesel_PHEV": country_data.CAR_COL17.to_numpy()[0] * 0.5,
-                                  "hydrogen_fuel-cell": country_data.CAR_COL18.to_numpy()[0],
+                                  "d_e_hybrid": country_data.CAR_COL16.to_numpy()[0],
+                                  "d_e_phev": country_data.CAR_COL17.to_numpy()[0] * 0.5,
+                                  "electricity_d_e_phev":
+                                      country_data.CAR_COL17.to_numpy()[0] * 0.5,
+
+                                  "hydrogen_fuel": country_data.CAR_COL18.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL19.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL20.to_numpy()[0],
-                                  "bi-Fuel": country_data.CAR_COL21.to_numpy()[0],
+                                  "bifuel": country_data.CAR_COL21.to_numpy()[0],
                                   "other": country_data.CAR_COL22.to_numpy()[0],
-                                  "electric_BEV": country_data.CAR_COL23.to_numpy()[0],
-                                  "electric_petrol_PHEV":
-                                      country_data.CAR_COL14.to_numpy()[0] * 0.5,
-                                  "electric_diesel_PHEV":
-                                      country_data.CAR_COL17.to_numpy()[0] * 0.5}
+                                  "electricity_bev": country_data.CAR_COL23.to_numpy()[0]}
 
         if year > 2021:
             propulsion_share[year]["petrol"] = (
-                                                       propulsion_share[2021]["petrol"] /
-                                                       (propulsion_share[2021]["petrol"] +
-                                                        propulsion_share[2021]["diesel"])
-                                               ) * (100 - (sum(propulsion_share[year].values()) -
-                                                           (propulsion_share[year]["petrol"] +
-                                                            propulsion_share[year]["diesel"] +
-                                                            propulsion_share[year][
-                                                                "electric_petrol_PHEV"] +
-                                                            propulsion_share[year][
-                                                                "electric_diesel_PHEV"])))
+                propulsion_share[2021]["petrol"] /
+                (propulsion_share[2021]["petrol"] +
+                 propulsion_share[2021]["diesel"])
+               ) * (100 - (sum(propulsion_share[year].values()) -
+                           (propulsion_share[year]["petrol"] +
+                            propulsion_share[year]["diesel"] +
+                            propulsion_share[year]["p_e_phev"] +
+                            propulsion_share[year]["d_e_phev"])))
 
             propulsion_share[year]["diesel"] = (
-                                                       propulsion_share[2021]["diesel"] /
-                                                       (propulsion_share[2021]["petrol"] +
-                                                        propulsion_share[2021]["diesel"])
-                                               ) * (100 - (sum(propulsion_share[year].values()) -
-                                                           (propulsion_share[year]["petrol"] +
-                                                            propulsion_share[year]["diesel"] +
-                                                            propulsion_share[year][
-                                                                "electric_petrol_PHEV"] +
-                                                            propulsion_share[year][
-                                                                "electric_diesel_PHEV"])))
+               propulsion_share[2021]["diesel"] /
+               (propulsion_share[2021]["petrol"] +
+                propulsion_share[2021]["diesel"])
+               ) * (100 - (sum(propulsion_share[year].values()) -
+                           (propulsion_share[year]["petrol"] +
+                            propulsion_share[year]["diesel"] +
+                            propulsion_share[year]["p_e_phev"] +
+                           propulsion_share[year]["d_e_phev"])))
 
         baseline_ef_road[year] = {"lpg": country_data.CAR_COL39.to_numpy()[0],
                                   "cng": country_data.CAR_COL40.to_numpy()[0],
                                   "ngv": country_data.CAR_COL41.to_numpy()[0],
+
                                   "petrol": country_data.CAR_COL42.to_numpy()[0],
-                                  "hybrid_electric-petrol": country_data.CAR_COL43.to_numpy()[0],
-                                  "petrol_PHEV": country_data.CAR_COL44.to_numpy()[0],
+                                  "p_e_hybrid": country_data.CAR_COL43.to_numpy()[0],
+                                  "p_e_phev": country_data.CAR_COL44.to_numpy()[0] * 0.5,
+                                  "electricity_p_e_phev":
+                                      country_data.CAR_COL44.to_numpy()[0] * 0.5,
+
                                   "diesel": country_data.CAR_COL45.to_numpy()[0],
-                                  "hybrid_electric-diesel": country_data.CAR_COL46.to_numpy()[0],
-                                  "diesel_PHEV": country_data.CAR_COL47.to_numpy()[0],
-                                  "hydrogen_fuel-cell": country_data.CAR_COL48.to_numpy()[0],
+                                  "d_e_hybrid": country_data.CAR_COL46.to_numpy()[0],
+                                  "d_e_phev": country_data.CAR_COL47.to_numpy()[0] * 0.5,
+                                  "electricity_d_e_phev":
+                                      country_data.CAR_COL47.to_numpy()[0] * 0.5,
+
+                                  "hydrogen_fuel": country_data.CAR_COL48.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL49.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL50.to_numpy()[0],
-                                  "bi-Fuel": country_data.CAR_COL51.to_numpy()[0],
+                                  "bifuel": country_data.CAR_COL51.to_numpy()[0],
                                   "other": country_data.CAR_COL52.to_numpy()[0],
-                                  "electric_BEV": country_data.CAR_COL53.to_numpy()[0],
-                                  "electric_petrol_PHEV": country_data.CAR_COL53.to_numpy()[0],
-                                  "electric_diesel_PHEV": country_data.CAR_COL53.to_numpy()[0]}
+                                  "electricity_bev": country_data.CAR_COL53.to_numpy()[0]}
 
         baseline_ef_street[year] = {"lpg": country_data.CAR_COL24.to_numpy()[0],
                                     "cng": country_data.CAR_COL25.to_numpy()[0],
                                     "ngv": country_data.CAR_COL26.to_numpy()[0],
+
                                     "petrol": country_data.CAR_COL27.to_numpy()[0],
-                                    "hybrid_electric-petrol": country_data.CAR_COL28.to_numpy()[0],
-                                    "petrol_PHEV": country_data.CAR_COL29.to_numpy()[0],
+                                    "p_e_hybrid": country_data.CAR_COL28.to_numpy()[0],
+                                    "p_e_phev": country_data.CAR_COL29.to_numpy()[0] * 0.5,
+                                    "electricity_p_e_phev":
+                                        country_data.CAR_COL29.to_numpy()[0] * 0.5,
+
                                     "diesel": country_data.CAR_COL30.to_numpy()[0],
-                                    "hybrid_electric-diesel": country_data.CAR_COL31.to_numpy()[0],
-                                    "diesel_PHEV": country_data.CAR_COL32.to_numpy()[0],
-                                    "hydrogen_fuel-cell": country_data.CAR_COL33.to_numpy()[0],
+                                    "d_e_hybrid": country_data.CAR_COL31.to_numpy()[0],
+                                    "d_e_phev": country_data.CAR_COL32.to_numpy()[0] * 0.5,
+                                    "electricity_d_e_phev":
+                                        country_data.CAR_COL32.to_numpy()[0] * 0.5,
+
+                                    "hydrogen_fuel": country_data.CAR_COL33.to_numpy()[0],
                                     "bioethanol": country_data.CAR_COL34.to_numpy()[0],
                                     "biodiesel": country_data.CAR_COL35.to_numpy()[0],
-                                    "bi-Fuel": country_data.CAR_COL36.to_numpy()[0],
+                                    "bifuel": country_data.CAR_COL36.to_numpy()[0],
                                     "other": country_data.CAR_COL37.to_numpy()[0],
-                                    "electric_BEV": country_data.CAR_COL38.to_numpy()[0],
-                                    "electric_petrol_PHEV": country_data.CAR_COL38.to_numpy()[0],
-                                    "electric_diesel_PHEV": country_data.CAR_COL38.to_numpy()[0]}
+                                    "electricity_bev": country_data.CAR_COL38.to_numpy()[0]}
 
     ef_road = {}
     ef_street = {}
@@ -1074,11 +1090,11 @@ def calculate_baseline_emissions_road_transport(country_data,
                                                 baseline_v):
     baseline_emissions_road_transport = {}
 
-    share_road_driving = {"metropolitan_center": country_data.ROAD_TRN_COL6.to_numpy()[0],
-                          "urban": country_data.ROAD_TRN_COL7.to_numpy()[0],
-                          "suburban": country_data.ROAD_TRN_COL8.to_numpy()[0],
-                          "town": country_data.ROAD_TRN_COL9.to_numpy()[0],
-                          "rural": country_data.ROAD_TRN_COL10.to_numpy()[0]}
+    share_road_driving = {"metropolitan_center": country_data.ROAD_TRN_COL38.to_numpy()[0],
+                          "urban": country_data.ROAD_TRN_COL39.to_numpy()[0],
+                          "suburban": country_data.ROAD_TRN_COL40.to_numpy()[0],
+                          "town": country_data.ROAD_TRN_COL41.to_numpy()[0],
+                          "rural": country_data.ROAD_TRN_COL42.to_numpy()[0]}
     share_street_driving = {}
     for settlement_type in share_road_driving.keys():
         share_street_driving[settlement_type] = 100 - share_road_driving[settlement_type]
@@ -1100,30 +1116,20 @@ def calculate_baseline_emissions_road_transport(country_data,
 
         if year > 2021:
             propulsion_share[year]["petrol_hybrid"] = (
-                                                              propulsion_share[2021][
-                                                                  "petrol_hybrid"] /
-                                                              (propulsion_share[2021][
-                                                                   "petrol_hybrid"] +
-                                                               propulsion_share[2021][
-                                                                   "diesel_hybrid"])) * \
-                                                      (100 - (sum(propulsion_share[year].values()) -
-                                                              (propulsion_share[year][
-                                                                   "petrol_hybrid"] +
-                                                               propulsion_share[year][
-                                                                   "diesel_hybrid"])))
+                propulsion_share[2021]["petrol_hybrid"] /
+                (propulsion_share[2021]["petrol_hybrid"] +
+                 propulsion_share[2021]["diesel_hybrid"])
+                ) * (100 - (sum(propulsion_share[year].values()) -
+            (propulsion_share[year]["petrol_hybrid"] +
+             propulsion_share[year]["diesel_hybrid"])))
 
             propulsion_share[year]["diesel_hybrid"] = (
-                                                              propulsion_share[2021][
-                                                                  "diesel_hybrid"] /
-                                                              (propulsion_share[2021][
-                                                                   "petrol_hybrid"] +
-                                                               propulsion_share[2021][
-                                                                   "diesel_hybrid"])) * \
-                                                      (100 - (sum(propulsion_share[year].values()) -
-                                                              (propulsion_share[year][
-                                                                   "petrol_hybrid"] +
-                                                               propulsion_share[year][
-                                                                   "diesel_hybrid"])))
+                propulsion_share[2021]["diesel_hybrid"] /
+                (propulsion_share[2021]["petrol_hybrid"] +
+                 propulsion_share[2021]["diesel_hybrid"])
+                ) * (100 - (sum(propulsion_share[year].values()) -
+            (propulsion_share[year]["petrol_hybrid"] +
+             propulsion_share[year]["diesel_hybrid"])))
 
         baseline_ef_road[year] = {"petrol_hybrid": country_data.ROAD_TRN_COL29.to_numpy()[0],
                                   "lpg": country_data.ROAD_TRN_COL30.to_numpy()[0],
@@ -1210,16 +1216,14 @@ def calculate_new_development(baseline,
     year_start = new_development["year_start"]
     year_finish = new_development["year_finish"]
 
-    if year_start < beginning_year:
-        return {}, {
-            "message": "Start year (in New Development) is larger than baseline start year."
-        }
-
     if year_start > year_finish:
         # Switching years
         tmp = year_start
         year_start = year_finish
         year_finish = tmp
+
+    if year_start < beginning_year:
+        year_start = beginning_year
 
     df = pd.read_csv('CSVfiles/Transport_full_dataset.csv',
                      skiprows=7)  # Skipping first 7 lines to ensure headers are correct
@@ -1457,16 +1461,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u31 = passenger_mobility["year_start"]
     year_end_u31 = passenger_mobility["year_end"]
 
-    if year_start_u31 < beginning_year:
-        return {
-            "message": "Start year (in passenger mobility) is smaller than baseline start year."
-        }
-
     if year_start_u31 > year_end_u31:
         # Switching years
         tmp = year_start_u31
         year_start_u31 = year_end_u31
         year_end_u31 = tmp
+
+    if year_start_u31 < beginning_year:
+        year_start_u31 = beginning_year
 
     policy_impact_passenger_mobility = calculate_policy_impact_passenger_mobility(
         year_range, country_data, new_emissions,
@@ -1479,16 +1481,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u32 = freight_transport["year_start"]
     year_end_u32 = freight_transport["year_end"]
 
-    if year_start_u32 < beginning_year:
-        return {
-            "message": "Start year (in freight transport) is smaller than baseline start year."
-        }
-
     if year_start_u32 > year_end_u32:
         # Switching years
         tmp = year_start_u32
         year_start_u32 = year_end_u32
         year_end_u32 = tmp
+
+    if year_start_u32 < beginning_year:
+        year_start_u32 = beginning_year
 
     policy_impact_freights = \
         calculate_change_policy_impact_freights(year_range, new_emissions,
@@ -1501,16 +1501,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u33 = modal_split_passenger["year_start"]
     year_end_u33 = modal_split_passenger["year_end"]
 
-    if year_start_u33 < beginning_year:
-        return {
-            "message": "Start year (in modal split passenger) is smaller than baseline start year."
-        }
-
     if year_start_u33 > year_end_u33:
         # Switching years
         tmp = year_start_u33
         year_start_u33 = year_end_u33
         year_end_u33 = tmp
+
+    if year_start_u33 < beginning_year:
+        year_start_u33 = beginning_year
 
     transport_impact_passenger_mobility = \
         calculate_transport_impact_passenger_mobility(year_range,
@@ -1524,16 +1522,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_start_u34 = modal_split_freight["year_start"]
     year_end_u34 = modal_split_freight["year_end"]
 
-    if year_start_u34 < beginning_year:
-        return {
-            "message": "Start year (in modal split freight) is smaller than baseline start year."
-        }
-
     if year_start_u34 > year_end_u34:
         # Switching years
         tmp = year_start_u34
         year_start_u34 = year_end_u34
         year_end_u34 = tmp
+
+    if year_start_u34 < beginning_year:
+        year_start_u34 = beginning_year
 
     transport_impact_freight = \
         calculate_transport_impact_freight(year_range, country_data,
@@ -1547,16 +1543,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u35 = fuel_shares_bus["year_end"]
     affected_area_u35 = fuel_shares_bus["affected_area"]
 
-    if year_start_u35 < beginning_year:
-        return {
-            "message": "Start year (in fuel shares bus) is smaller than baseline start year."
-        }
-
     if year_start_u35 > year_end_u35:
         # Switching years
         tmp = year_start_u35
         year_start_u35 = year_end_u35
         year_end_u35 = tmp
+
+    if year_start_u35 < beginning_year:
+        year_start_u35 = beginning_year
 
     baseline_emissions_bus = \
         calculate_impact_bus_ef(year_range, country_data, baseline,
@@ -1577,16 +1571,14 @@ def calculate_policy_quantification(baseline, policy_quantification,
     year_end_u36 = fuel_shares_car["year_end"]
     affected_area_u36 = fuel_shares_car["affected_area"]
 
-    if year_start_u36 < beginning_year:
-        return {
-            "message": "Start year (in fuel shares car) is smaller than baseline start year."
-        }
-
     if year_start_u36 > year_end_u36:
         # Switching years
         tmp = year_start_u36
         year_start_u36 = year_end_u36
         year_end_u36 = tmp
+
+    if year_start_u36 < beginning_year:
+        year_start_u36 = beginning_year
 
     baseline_emissions_car = \
         calculate_impact_car_ef(year_range, country_data, baseline,
@@ -1601,6 +1593,21 @@ def calculate_policy_quantification(baseline, policy_quantification,
             baseline_emissions_car[year] / 1000
 
     # U3.7 ########################################
+
+    electricity_transport = policy_quantification["electricity_transport"]
+    types_u37 = electricity_transport["types"]
+    year_start_u37 = electricity_transport["year_start"]
+    year_end_u37 = electricity_transport["year_end"]
+    affected_area_u37 = electricity_transport["affected_area"]
+
+    if year_start_u37 > year_end_u37:
+        # Switching years
+        tmp = year_start_u37
+        year_start_u37 = year_end_u37
+        year_end_u37 = tmp
+
+    if year_start_u37 < beginning_year:
+        year_start_u37 = beginning_year
 
     # Aggregating results ########################################
     policy_quantification_response = {
@@ -2261,83 +2268,92 @@ def calculate_impact_car_ef(year_range, country_data, baseline,
         propulsion_share[year] = {"lpg": country_data.CAR_COL9.to_numpy()[0],
                                   "cng": country_data.CAR_COL10.to_numpy()[0],
                                   "ngv": country_data.CAR_COL11.to_numpy()[0],
+
                                   "petrol": country_data.CAR_COL12.to_numpy()[0],
-                                  "hep": country_data.CAR_COL13.to_numpy()[0],
-                                  "phev": country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "p_e_hybrid": country_data.CAR_COL13.to_numpy()[0],
+                                  "p_e_phev": country_data.CAR_COL14.to_numpy()[0] * 0.5,
+                                  "electricity_p_e_phev":
+                                      country_data.CAR_COL14.to_numpy()[0] * 0.5,
+
                                   "diesel": country_data.CAR_COL15.to_numpy()[0],
-                                  "hybrid_electric-diesel": country_data.CAR_COL16.to_numpy()[0],
-                                  "diesel_PHEV": country_data.CAR_COL17.to_numpy()[0] * 0.5,
-                                  "hydrogenfuel": country_data.CAR_COL18.to_numpy()[0],
+                                  "d_e_hybrid": country_data.CAR_COL16.to_numpy()[0],
+                                  "d_e_phev": country_data.CAR_COL17.to_numpy()[0] * 0.5,
+                                  "electricity_d_e_phev":
+                                      country_data.CAR_COL17.to_numpy()[0] * 0.5,
+
+                                  "hydrogen_fuel": country_data.CAR_COL18.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL19.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL20.to_numpy()[0],
                                   "bifuel": country_data.CAR_COL21.to_numpy()[0],
                                   "other": country_data.CAR_COL22.to_numpy()[0],
-                                  "electricity": country_data.CAR_COL23.to_numpy()[0],
-                                  "electric_petrol_PHEV":
-                                      country_data.CAR_COL14.to_numpy()[0] * 0.5,
-                                  "electric_diesel_PHEV":
-                                      country_data.CAR_COL17.to_numpy()[0] * 0.5}
+                                  "electricity_bev": country_data.CAR_COL23.to_numpy()[0]}
 
         if year > 2021:
             propulsion_share[year]["petrol"] = (
-                                                       propulsion_share[2021]["petrol"] /
-                                                       (propulsion_share[2021]["petrol"] +
-                                                        propulsion_share[2021]["diesel"])
-                                               ) * (100 - (sum(propulsion_share[year].values()) -
-                                                           (propulsion_share[year]["petrol"] +
-                                                            propulsion_share[year]["diesel"] +
-                                                            propulsion_share[year][
-                                                                "electric_petrol_PHEV"] +
-                                                            propulsion_share[year][
-                                                                "electric_diesel_PHEV"])))
+                propulsion_share[2021]["petrol"] /
+                (propulsion_share[2021]["petrol"] +
+                 propulsion_share[2021]["diesel"])
+               ) * (100 - (sum(propulsion_share[year].values()) -
+                           (propulsion_share[year]["petrol"] +
+                            propulsion_share[year]["diesel"] +
+                            propulsion_share[year]["p_e_phev"] +
+                            propulsion_share[year]["d_e_phev"])))
 
             propulsion_share[year]["diesel"] = (
-                                                       propulsion_share[2021]["diesel"] /
-                                                       (propulsion_share[2021]["petrol"] +
-                                                        propulsion_share[2021]["diesel"])
-                                               ) * (100 - (sum(propulsion_share[year].values()) -
-                                                           (propulsion_share[year]["petrol"] +
-                                                            propulsion_share[year]["diesel"] +
-                                                            propulsion_share[year][
-                                                                "electric_petrol_PHEV"] +
-                                                            propulsion_share[year][
-                                                                "electric_diesel_PHEV"])))
+               propulsion_share[2021]["diesel"] /
+               (propulsion_share[2021]["petrol"] +
+                propulsion_share[2021]["diesel"])
+               ) * (100 - (sum(propulsion_share[year].values()) -
+                           (propulsion_share[year]["petrol"] +
+                            propulsion_share[year]["diesel"] +
+                            propulsion_share[year]["p_e_phev"] +
+                           propulsion_share[year]["d_e_phev"])))
 
         baseline_ef_road[year] = {"lpg": country_data.CAR_COL39.to_numpy()[0],
                                   "cng": country_data.CAR_COL40.to_numpy()[0],
                                   "ngv": country_data.CAR_COL41.to_numpy()[0],
+
                                   "petrol": country_data.CAR_COL42.to_numpy()[0],
-                                  "hep": country_data.CAR_COL43.to_numpy()[0],
-                                  "phev": country_data.CAR_COL44.to_numpy()[0],
+                                  "p_e_hybrid": country_data.CAR_COL43.to_numpy()[0],
+                                  "p_e_phev": country_data.CAR_COL44.to_numpy()[0] * 0.5,
+                                  "electricity_p_e_phev":
+                                      country_data.CAR_COL44.to_numpy()[0] * 0.5,
+
                                   "diesel": country_data.CAR_COL45.to_numpy()[0],
-                                  "hybrid_electric-diesel": country_data.CAR_COL46.to_numpy()[0],
-                                  "diesel_PHEV": country_data.CAR_COL47.to_numpy()[0],
-                                  "hydrogenfuel": country_data.CAR_COL48.to_numpy()[0],
+                                  "d_e_hybrid": country_data.CAR_COL46.to_numpy()[0],
+                                  "d_e_phev": country_data.CAR_COL47.to_numpy()[0] * 0.5,
+                                  "electricity_d_e_phev":
+                                      country_data.CAR_COL47.to_numpy()[0] * 0.5,
+
+                                  "hydrogen_fuel": country_data.CAR_COL48.to_numpy()[0],
                                   "bioethanol": country_data.CAR_COL49.to_numpy()[0],
                                   "biodiesel": country_data.CAR_COL50.to_numpy()[0],
                                   "bifuel": country_data.CAR_COL51.to_numpy()[0],
                                   "other": country_data.CAR_COL52.to_numpy()[0],
-                                  "electricity": country_data.CAR_COL53.to_numpy()[0],
-                                  "electric_petrol_PHEV": country_data.CAR_COL53.to_numpy()[0],
-                                  "electric_diesel_PHEV": country_data.CAR_COL53.to_numpy()[0]}
+                                  "electricity_bev": country_data.CAR_COL53.to_numpy()[0]}
 
         baseline_ef_street[year] = {"lpg": country_data.CAR_COL24.to_numpy()[0],
                                     "cng": country_data.CAR_COL25.to_numpy()[0],
                                     "ngv": country_data.CAR_COL26.to_numpy()[0],
+
                                     "petrol": country_data.CAR_COL27.to_numpy()[0],
-                                    "hep": country_data.CAR_COL28.to_numpy()[0],
-                                    "phev": country_data.CAR_COL29.to_numpy()[0],
+                                    "p_e_hybrid": country_data.CAR_COL28.to_numpy()[0],
+                                    "p_e_phev": country_data.CAR_COL29.to_numpy()[0] * 0.5,
+                                    "electricity_p_e_phev":
+                                        country_data.CAR_COL29.to_numpy()[0] * 0.5,
+
                                     "diesel": country_data.CAR_COL30.to_numpy()[0],
-                                    "hybrid_electric-diesel": country_data.CAR_COL31.to_numpy()[0],
-                                    "diesel_PHEV": country_data.CAR_COL32.to_numpy()[0],
-                                    "hydrogenfuel": country_data.CAR_COL33.to_numpy()[0],
+                                    "d_e_hybrid": country_data.CAR_COL31.to_numpy()[0],
+                                    "d_e_phev": country_data.CAR_COL32.to_numpy()[0] * 0.5,
+                                    "electricity_d_e_phev":
+                                        country_data.CAR_COL32.to_numpy()[0] * 0.5,
+
+                                    "hydrogen_fuel": country_data.CAR_COL33.to_numpy()[0],
                                     "bioethanol": country_data.CAR_COL34.to_numpy()[0],
                                     "biodiesel": country_data.CAR_COL35.to_numpy()[0],
                                     "bifuel": country_data.CAR_COL36.to_numpy()[0],
                                     "other": country_data.CAR_COL37.to_numpy()[0],
-                                    "electricity": country_data.CAR_COL38.to_numpy()[0],
-                                    "electric_petrol_PHEV": country_data.CAR_COL38.to_numpy()[0],
-                                    "electric_diesel_PHEV": country_data.CAR_COL38.to_numpy()[0]}
+                                    "electricity_bev": country_data.CAR_COL38.to_numpy()[0]}
 
     annual_change = {}
 
@@ -2347,23 +2363,21 @@ def calculate_impact_car_ef(year_range, country_data, baseline,
         for year in year_range:
             if year_start <= year <= year_end:
                 annual_change[prplsn_type][year] = (
-                                                           types[prplsn_type] -
-                                                           propulsion_share[year - 1][
-                                                               prplsn_type]) / \
+                    types[prplsn_type] - propulsion_share[year - 1][prplsn_type]) /\
                                                    (year_end - year_start + 1)
             else:
                 annual_change[prplsn_type][year] = 0
 
-        # Elements missing in UI so setting ZERO
-        annual_change["hybrid_electric-diesel"] = {}
-        annual_change["diesel_PHEV"] = {}
-        annual_change["electric_petrol_PHEV"] = {}
-        annual_change["electric_diesel_PHEV"] = {}
-        for year in year_range:
-            annual_change["hybrid_electric-diesel"][year] = 0
-            annual_change["diesel_PHEV"][year] = 0
-            annual_change["electric_petrol_PHEV"][year] = 0
-            annual_change["electric_diesel_PHEV"][year] = 0
+    # Elements missing in UI so setting ZERO
+    annual_change["petrol"] = {}
+    annual_change["electricity_p_e_phev"] = {}
+    annual_change["diesel"] = {}
+    annual_change["electricity_d_e_phev"] = {}
+    for year in year_range:
+        annual_change["petrol"][year] = 0
+        annual_change["electricity_p_e_phev"][year] = 0
+        annual_change["diesel"][year] = 0
+        annual_change["electricity_d_e_phev"][year] = 0
 
     percent_with_u36_impact = {}
 
