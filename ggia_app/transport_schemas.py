@@ -14,6 +14,7 @@ class Baseline(Schema):
         validate=[Range(min=1, error="Population must be greater than 0")])
     settlement_distribution = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
     year = fields.Integer(required=False)
+    intensity_non_res_and_ft = fields.Dict(required=True, keys=fields.Str(), values=fields.Str())
     metro_split = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
     tram_split = fields.Dict(required=True, keys=fields.Str(), values=fields.Float())
 
