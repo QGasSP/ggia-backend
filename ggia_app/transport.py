@@ -70,6 +70,10 @@ def route_baseline():
         for year in list(baseline_response["projections"][ptype]):
             if year < selected_year:
                 baseline_response["projections"][ptype].pop(year, None)
+        if ptype != "population":
+            for year in list(baseline_response["absolute_projections"][ptype]):
+                if year < selected_year:
+                    baseline_response["absolute_projections"][ptype].pop(year, None)
 
     return {
         "status": "success",
@@ -124,6 +128,11 @@ def route_new_development():
             if year < selected_year:
                 baseline_response["projections"][ptype].pop(year, None)
 
+        if ptype != "population":
+            for year in list(baseline_response["absolute_projections"][ptype]):
+                if year < selected_year:
+                    baseline_response["absolute_projections"][ptype].pop(year, None)
+
     for year in list(new_development_response["impact"]["new_residents"]):
         if year < selected_year:
             new_development_response["impact"]["new_residents"].pop(year, None)
@@ -141,6 +150,7 @@ def route_new_development():
         for year in list(new_development_response["impact"]["emissions"][ptype]):
             if year < selected_year:
                 new_development_response["impact"]["emissions"][ptype].pop(year, None)
+                new_development_response["impact"]["absolute_emissions"][ptype].pop(year, None)
 
     return {
         "status": "success",
@@ -208,6 +218,11 @@ def route_transport():
             if year < selected_year:
                 baseline_response["projections"][ptype].pop(year, None)
 
+        if ptype != "population":
+            for year in list(baseline_response["absolute_projections"][ptype]):
+                if year < selected_year:
+                    baseline_response["absolute_projections"][ptype].pop(year, None)
+
     for year in list(new_development_response["impact"]["new_residents"]):
         if year < selected_year:
             new_development_response["impact"]["new_residents"].pop(year, None)
@@ -225,6 +240,7 @@ def route_transport():
         for year in list(new_development_response["impact"]["emissions"][ptype]):
             if year < selected_year:
                 new_development_response["impact"]["emissions"][ptype].pop(year, None)
+                new_development_response["impact"]["absolute_emissions"][ptype].pop(year, None)
 
     return {
         "status": "success",
