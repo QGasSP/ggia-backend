@@ -297,8 +297,10 @@ def calculate_baseline(baseline):
     population = baseline["population"]
     selected_year = baseline["year"]
     settlement_distribution = baseline["settlement_distribution"]
+    intensity_non_res_and_ft_opts = baseline["intensity_non_res_and_ft"]
     metro_split = baseline["metro_split"]
     tram_split = baseline["tram_split"]
+
 
     year_range = list(range(2021, 2051))
 
@@ -321,6 +323,9 @@ def calculate_baseline(baseline):
                                                                                   country_data)
     population_by_year = calculate_population(population, selected_year, country_data)
 
+    intensity_non_res_and_ft = generate_intensity_non_res_and_ft(intensity_non_res_and_ft_opts,
+                                                                 country_data)
+
     settlement_distribution_by_year = {}
 
     for year in year_range:
@@ -332,6 +337,7 @@ def calculate_baseline(baseline):
 
     baseline_v, projections = calculate_baseline_emissions(year_range,
                                                            settlement_distribution_by_year,
+                                                           intensity_non_res_and_ft,
                                                            metro_split, tram_split, country_data,
                                                            population_by_year,
                                                            grid_electricity_emission_factor)
@@ -430,7 +436,69 @@ def calculate_population(initialized_population, initialized_year, country_data)
     return population
 
 
+def generate_intensity_non_res_and_ft(intensity_non_res_and_ft_opts, country_data):
+    intensity_non_res_and_ft = {}
+
+    citizen_transport_modes = ["bus", "car", "train",
+                               "rail_transport", "road_transport", "waterways_transport"]
+
+    for transport_type in citizen_transport_modes:
+        if transport_type == "bus" or transport_type == "car":
+            if intensity_non_res_and_ft_opts["non_res_pt"] == "none":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL7.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["non_res_pt"] == "low_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL8.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["non_res_pt"] == "average_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL9.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["non_res_pt"] == "high_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL10.to_numpy()[0]
+            else:
+                intensity_non_res_and_ft[transport_type] = 1
+
+        elif transport_type == "train":
+            intensity_non_res_and_ft[transport_type] = 1
+
+        elif transport_type == "rail_transport":
+            if intensity_non_res_and_ft_opts["ft_rail"] == "none":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL15.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_rail"] == "low_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL16.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_rail"] == "average_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL17.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_rail"] == "high_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL18.to_numpy()[0]
+            else:
+                intensity_non_res_and_ft[transport_type] = 1
+
+        elif transport_type == "road_transport":
+            if intensity_non_res_and_ft_opts["ft_road"] == "none":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL11.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_road"] == "low_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL12.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_road"] == "average_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL13.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_road"] == "high_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL14.to_numpy()[0]
+            else:
+                intensity_non_res_and_ft[transport_type] = 1
+
+        elif transport_type == "waterways_transport":
+            if intensity_non_res_and_ft_opts["ft_water"] == "none":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL19.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_water"] == "low_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL20.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_water"] == "average_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL21.to_numpy()[0]
+            elif intensity_non_res_and_ft_opts["ft_water"] == "high_intensity":
+                intensity_non_res_and_ft[transport_type] = country_data.MENU_COL22.to_numpy()[0]
+            else:
+                intensity_non_res_and_ft[transport_type] = 1
+
+    return intensity_non_res_and_ft
+
+
 def calculate_baseline_emissions(year_range, settlement_distribution_by_year,
+                                 intensity_non_res_and_ft,
                                  metro_split, tram_split, country_data,
                                  population_by_year,
                                  grid_electricity_emission_factor):
@@ -455,7 +523,7 @@ def calculate_baseline_emissions(year_range, settlement_distribution_by_year,
 
     for transport_type in transport_modes:
         baseline_v[transport_type] = \
-            calculate_baseline_v(year_range, metro_split, tram_split,
+            calculate_baseline_v(year_range, intensity_non_res_and_ft, metro_split, tram_split,
                                  country_data, transport_type, correction_factor)
         if transport_type == "bus":
             baseline_emissions[transport_type] = \
@@ -588,7 +656,7 @@ def calculate_correction_factors(transport_mode_weights, settlement_distribution
     return correction_factor
 
 
-def calculate_baseline_v(year_range, metro_split, tram_split,
+def calculate_baseline_v(year_range, intensity_non_res_and_ft, metro_split, tram_split,
                          country_data, transport_type, correction_factor):
     baseline_v = {}
 
@@ -651,7 +719,8 @@ def calculate_baseline_v(year_range, metro_split, tram_split,
         for year in year_range:
             if year == 2021:
                 baseline_v[year] = passenger_km_per_capita / occupancy_rate * \
-                                   correction_factor[transport_type]
+                                   correction_factor[transport_type] * \
+                                   intensity_non_res_and_ft[transport_type]
             elif 2022 <= year <= 2030:
                 baseline_v[year] = baseline_v[year - 1] * \
                                    (100 + annual_change_2020_2030) / 100
