@@ -2,9 +2,13 @@ import pandas as pd
 
 from ggia_app.buildings.utils.emission_factor_calculator import emission_factor
 from ggia_app.buildings.baseline.main import calculate_baseline_emission
-from .u71 import u71_emission as u71_emission_calculator
-from .u72 import u72_emission as u72_emission_calculator
-from .u73 import u73_emission as u73_emission_calculator
+from .unit7.u71 import u71_emission as u71_emission_calculator
+from .unit7.u72 import u72_emission as u72_emission_calculator
+from .unit7.u73 import u73_emission as u73_emission_calculator
+
+from .unit8.residential import residential_emission
+from .unit8.commercial import commercial_emission
+from .unit8.change_building_use import building_emission
 
 
 def calculate_settlements_emission(
@@ -62,7 +66,9 @@ def calculate_settlements_emission(
         densification_industrial_renewables_percent,
         densification_warehouses_floor_area, densification_warehouses_rate,
         densification_warehouses_completed_from, densification_warehouses_completed_to,
-        densification_warehouses_renewables_percent
+        densification_warehouses_renewables_percent,
+
+        policy_residential_list, policy_commercial_list, policy_building_changes_list
 ):
     df = pd.read_csv('CSVfiles/buildings.csv')
     df.fillna(0, inplace=True)
@@ -171,6 +177,81 @@ def calculate_settlements_emission(
     office_emission = u6_office_emission + u72_offices_emission + u73_offices_emission
     industrial_emission = u6_industrial_emission + u72_industrial_emission + u73_industrial_emission
     warehouse_emission = u6_warehouse_emission + u72_warehouses_emission + u73_warehouses_emission
+
+    for u81_input in policy_residential_list:
+        r = residential_emission(
+            df=df, country_code=country_code, emission_factors_df=emission_factors_df,
+            start_year=start_year,
+            selected_residential_unit=u81_input['unit_type'],
+            Number_of_units=u81_input['number_of_units'],
+            before=u81_input['energy_use_before'], after=u81_input['energy_use_after'], 
+            unit_renewables_percent=u81_input['renewable_energy_percent'], 
+            unit_completed_from=u81_input['start_year'], unit_completed_to=u81_input['end_year']
+        )
+        if u81_input['unit_type'] == 'Apartment':
+            apartment_emission = apartment_emission - r
+        elif u81_input['unit_type'] == 'Terraced':
+            terraced_emission = terraced_emission - r
+        elif u81_input['unit_type'] == 'Semidetached':
+            semi_detach_emission = semi_detach_emission - r
+        elif u81_input['unit_type'] == 'Detached':
+            detach_emission = detach_emission - r
+
+    for u82_input in policy_commercial_list:
+        r = commercial_emission(
+            df=df, country_code=country_code, emission_factors_df=emission_factors_df,
+            start_year=start_year,
+            selected_commercial_unit=u82_input["building_type"],
+            floor_area=u82_input["total_floor_area"],
+            energy_demand_reduction=u82_input["energy_demand_reduction_percent"],
+            unit_renewables_percent=u82_input["renewable_energy_percent"],
+            unit_completed_from=u82_input["start_year"],
+            unit_completed_to=u82_input["end_year"]
+
+        )
+        if u82_input['building_type'] == 'Retail':
+            retail_emission = retail_emission - r
+        elif u82_input['building_type'] == 'Health':
+            health_emission = health_emission - r
+        elif u82_input['building_type'] == 'Hospitality':
+            hospitality_emission = hospitality_emission - r
+        elif u82_input['building_type'] == 'Offices':
+            office_emission = office_emission - r
+        elif u82_input['building_type'] == 'Industrial':
+            industrial_emission = industrial_emission - r
+        elif u82_input['building_type'] == 'Warehouses':
+            warehouse_emission = warehouse_emission - r
+
+    for u83_input in policy_building_changes_list:
+        r = building_emission(
+            df=df, country_code=country_code, emission_factors_df=emission_factors_df,
+            start_year=start_year,
+            floor_area=u83_input["total_floor_area"],
+            from_unit=u83_input["from_type"],
+            unit_completed_from=u83_input["from_conversions_implemented"],
+            unit_completed_to=u83_input["to_conversions_implemented"],
+            to_unit=u83_input["to_type"]
+        )
+        if u83_input['from_type'] == 'Apartment':
+            apartment_emission = apartment_emission - r
+        elif u83_input['from_type'] == 'Terraced':
+            terraced_emission = terraced_emission - r
+        elif u83_input['from_type'] == 'Semidetached':
+            semi_detach_emission = semi_detach_emission - r
+        elif u83_input['from_type'] == 'Detached':
+            detach_emission = detach_emission - r
+        elif u83_input['from_type'] == 'Retail':
+            retail_emission = retail_emission - r
+        elif u83_input['from_type'] == 'Health':
+            health_emission = health_emission - r
+        elif u83_input['from_type'] == 'Hospitality':
+            hospitality_emission = hospitality_emission - r
+        elif u83_input['from_type'] == 'Offices':
+            office_emission = office_emission - r
+        elif u83_input['from_type'] == 'Industrial':
+            industrial_emission = industrial_emission - r
+        elif u83_input['from_type'] == 'Warehouses':
+            warehouse_emission = warehouse_emission - r
 
     energy_carriers = ['Electricity', 'Gas', 'Oil', 'Coal', 'Peat', 'Wood', 'Renewable', 'Heat']
 
