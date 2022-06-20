@@ -1,9 +1,9 @@
-from .unit7.retail import retail_emission as _retail_emission
-from .unit7.health import health_emission as _health_emission
-from .unit7.hospitality import hospitality_emission as _hospitality_emission
-from .unit7.office import office_emission as _office_emission
-from .unit7.industrial import industrial_emission as _industrial_emission
-from .unit7.warehouse import warehouse_emission as _warehouse_emission
+from ggia_app.buildings.settlements_and_policies.unit7.retail import retail_emission as _retail_emission
+from ggia_app.buildings.settlements_and_policies.unit7.health import health_emission as _health_emission
+from ggia_app.buildings.settlements_and_policies.unit7.hospitality import hospitality_emission as _hospitality_emission
+from ggia_app.buildings.settlements_and_policies.unit7.office import office_emission as _office_emission
+from ggia_app.buildings.settlements_and_policies.unit7.industrial import industrial_emission as _industrial_emission
+from ggia_app.buildings.settlements_and_policies.unit7.warehouse import warehouse_emission as _warehouse_emission
 
 
 def u72_emission(

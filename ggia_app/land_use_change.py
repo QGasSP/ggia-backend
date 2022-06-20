@@ -72,7 +72,7 @@ def calculate_land_use_change_21_to_30(country, land_use_change_dict, affected_y
             except Exception as e:
                 print(e)
 
-        result_dict[land_type] = result
+        result_dict[land_type] = result        
 
     return result_dict
 
@@ -109,6 +109,7 @@ def calculate_land_use_change_new(country, land_use_change_dict, policy_start_ye
                 * LAND_USE_CHANGE_CONVERSION_FACTOR \
                 * value
         result_dict[land_type] = result
+        
     return result_dict
 
 
@@ -125,8 +126,22 @@ def route_land_use_change():
     land_use_change_response = dict()
     start = datetime.datetime.now()
     for year in range(start_year, 2051):
-        land_use_change_response[year] = calculate_land_use_change_new(country, land_use_change_dict,
-                                                                       policy_start_years, year)
+        result = calculate_land_use_change_new(country, land_use_change_dict,
+                                                            policy_start_years, year)
+        sink = 0
+        total = 0
+        for land_type in result:
+            emissions = result[land_type]
+            if emissions < 0:
+                sink += emissions
+            else:
+                total += emissions
+        
+        result["sink"] = sink
+        result["total"] = total
+
+        land_use_change_response[year] = result
+
     finish = datetime.datetime.now()
     print(finish-start)
     return humps.camelize({

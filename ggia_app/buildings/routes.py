@@ -63,6 +63,11 @@ def post_settlements_and_policy():
     construction_commercial = request_body['construction']['commercial']
     densification_residential = request_body['densification']['residential']
     densification_commercial = request_body['densification']['commercial']
+    policy_residential_list = request_body['policy_quantification'][
+        'residential_retrofit'].values()
+    policy_commercial_list = request_body['policy_quantification']['commercial_retrofit'].values()
+    policy_building_changes_list = request_body['policy_quantification'][
+        'building_changes'].values()
 
     settlements_table, policy_table, result = calculate_settlements_emission(
         start_year=request_body['year'], country=request_body['country'],
@@ -205,6 +210,10 @@ def post_settlements_and_policy():
         densification_warehouses_completed_to=densification_commercial["warehouses"]["end_year"],
         densification_warehouses_renewables_percent=densification_commercial["warehouses"][
             "renewable_energy_percent"],
+
+        policy_residential_list=policy_residential_list,
+        policy_commercial_list=policy_commercial_list,
+        policy_building_changes_list=policy_building_changes_list,
     )
 
     data = {
