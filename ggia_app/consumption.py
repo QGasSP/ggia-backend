@@ -920,6 +920,8 @@ class Consumption:
 
         if pop_size_policy is None or pop_size_policy < DELTA_ZERO:
             pop_size_policy = self.pop_size
+        else:
+            self.pop_size_policy += self.pop_size  # we are now talking about new residents
         self.pop_size_policy = pop_size_policy
 
         # if anything will be modified, this is not a baseline - TODO: check with Peter
