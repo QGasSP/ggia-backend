@@ -645,6 +645,18 @@ def calculate_baseline_emissions(
                 country_data, baseline_v[transport_type]
             )
 
+    baseline_emissions["total"] = {}
+
+    for year in year_range:
+        baseline_emissions["total"][year] = baseline_emissions["bus"][year] + \
+                                            baseline_emissions["car"][year] + \
+                                            baseline_emissions["metro"][year] + \
+                                            baseline_emissions["tram"][year] + \
+                                            baseline_emissions["train"][year] + \
+                                            baseline_emissions["rail_transport"][year] + \
+                                            baseline_emissions["road_transport"][year] + \
+                                            baseline_emissions["waterways_transport"][year]
+
     return baseline_v, baseline_emissions
 
 
@@ -1652,9 +1664,22 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
         weighted_cf_by_transport_year,
     )
 
+    new_baseline_emissions["total"] = {}
+
+    for year in year_range:
+        new_baseline_emissions["total"][year] = \
+            new_baseline_emissions["bus"][year] + \
+            new_baseline_emissions["car"][year] + \
+            new_baseline_emissions["metro"][year] + \
+            new_baseline_emissions["tram"][year] + \
+            new_baseline_emissions["train"][year] + \
+            new_baseline_emissions["rail_transport"][year] + \
+            new_baseline_emissions["road_transport"][year] + \
+            new_baseline_emissions["waterways_transport"][year]
+
     new_baseline_absolute_emissions = {}
 
-    for transport_type in transport_modes:
+    for transport_type in new_baseline_emissions.keys():
         new_baseline_absolute_emissions[transport_type] = {}
 
         for year in year_range:
