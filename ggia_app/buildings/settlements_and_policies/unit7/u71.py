@@ -1,7 +1,7 @@
-from ggia_app.buildings.settlements_and_policies.unit7.apartment import apartment_emission as _apartment_emission
-from ggia_app.buildings.settlements_and_policies.unit7.terraced_units import terraced_emission as _terraced_emission
-from ggia_app.buildings.settlements_and_policies.unit7.semi_detach import semi_detach_emission as _semi_detach_emission
-from ggia_app.buildings.settlements_and_policies.unit7.detached import detach_emission as _detach_emission
+from .apartment import apartment_emission as _apartment_emission
+from .terraced_units import terraced_emission as _terraced_emission
+from .semi_detach import semi_detach_emission as _semi_detach_emission
+from .detached import detach_emission as _detach_emission
 
 
 def u71_emission(
