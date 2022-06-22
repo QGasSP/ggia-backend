@@ -2275,7 +2275,6 @@ def calculate_policy_quantification(
         "rail_transport": total_rail_transport_ef,
         "road_transport": total_road_transport_ef,
         "waterways_transport": total_water_transport_ef,
-        "total": {},
     }
 
     for transport_type in policy_quantification_response.keys():
@@ -2283,6 +2282,8 @@ def calculate_policy_quantification(
             # Replacing NANs (if any) with ZEROs
             if math.isnan(policy_quantification_response[transport_type][year]):
                 policy_quantification_response[transport_type][year] = 0.0
+
+    policy_quantification_response["total"] = {}
 
     for year in year_range:
         policy_quantification_response["total"][year] = (
