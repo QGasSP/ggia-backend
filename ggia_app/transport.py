@@ -354,20 +354,10 @@ def calculate_baseline(baseline):
                 projections[transport_type][year], 3
             )
 
-            # Replacing NANs (if any) with ZEROs
-            if math.isnan(projections[transport_type][year]):
-                projections[transport_type][year] = 0.0
-                absolute_projections[transport_type][year] = 0.0
-
         emissions[transport_type] = projections[transport_type][selected_year]
         absolute_emissions[transport_type] = absolute_projections[transport_type][
             selected_year
         ]
-
-    for year in year_range:
-        # Replacing NANs (if any) with ZEROs
-        if math.isnan(population_by_year[year]):
-            population_by_year[year] = 0.0
 
     projections["population"] = population_by_year
 
@@ -644,6 +634,11 @@ def calculate_baseline_emissions(
             ] = calculate_baseline_emissions_waterways_transport(
                 country_data, baseline_v[transport_type]
             )
+
+        for year in year_range:
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(baseline_emissions[transport_type][year]):
+                baseline_emissions[transport_type][year] = 0.0
 
     baseline_emissions["total"] = {}
 
@@ -1694,11 +1689,6 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
                 new_baseline_emissions[transport_type][year], 3
             )
 
-            # Replacing NANs (if any) with ZEROs
-            if math.isnan(new_baseline_emissions[transport_type][year]):
-                new_baseline_absolute_emissions[transport_type][year] = 0.0
-                new_baseline_emissions[transport_type][year] = 0.0
-
     for year in year_range:
         for settlement_type in adjusted_settlement_distribution_by_year[year].keys():
             adjusted_settlement_distribution_by_year[year][settlement_type] = round(
@@ -1714,10 +1704,10 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
     for year in year_range:
         # Replacing NANs (if any) with ZEROs
         if math.isnan(new_residents_by_year[year]):
-            new_residents_by_year[year] = 0.0
+            new_residents_by_year[year] = 0
         # Replacing NANs (if any) with ZEROs
         if math.isnan(new_population_by_year[year]):
-            new_population_by_year[year] = 0.0
+            new_population_by_year[year] = 0
 
     return (
         adjusted_settlement_distribution_by_year,
@@ -1995,6 +1985,11 @@ def calculate_new_baseline_emissions(
             ] = calculate_baseline_emissions_waterways_transport(
                 country_data, baseline_v[transport_type]
             )
+
+        for year in year_range:
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(new_baseline_emissions[transport_type][year]):
+                new_baseline_emissions[transport_type][year] = 0.0
 
     return modal_split_u2, new_baseline_emissions
 
@@ -2283,6 +2278,12 @@ def calculate_policy_quantification(
         "total": {},
     }
 
+    for transport_type in policy_quantification_response.keys():
+        for year in year_range:
+            # Replacing NANs (if any) with ZEROs
+            if math.isnan(policy_quantification_response[transport_type][year]):
+                policy_quantification_response[transport_type][year] = 0.0
+
     for year in year_range:
         policy_quantification_response["total"][year] = (
             policy_quantification_response["bus"][year]
@@ -2311,11 +2312,6 @@ def calculate_policy_quantification(
             policy_quantification_response[transport_type][year] = round(
                 policy_quantification_response[transport_type][year], 3
             )
-
-            # Replacing NANs (if any) with ZEROs
-            if math.isnan(policy_quantification_response[transport_type][year]):
-                policy_quantification_response[transport_type][year] = 0.0
-                absolute_policy_quantification_response[transport_type][year] = 0.0
 
             if year < beginning_year:
                 policy_quantification_response[transport_type].pop(year, None)
