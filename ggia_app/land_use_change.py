@@ -85,9 +85,9 @@ def route_land_use_change():
                 land_use_baseline_per_capita[land_use_type].pop(year, None)
 
     for year in land_use_change_prediction.keys():
-        for land_use_change_type in land_use_change_prediction[year].keys():
-            land_use_change_prediction[year][land_use_change_type] = round(
-                land_use_change_prediction[year][land_use_change_type], 3)
+        for land_use_change_type in land_use_change_prediction[year]["landUseChange"].keys():
+            land_use_change_prediction[year]["landUseChange"][land_use_change_type] = round(
+                land_use_change_prediction[year]["landUseChange"][land_use_change_type], 3)
 
         land_use_change_pnt["positive"][year] = round(land_use_change_pnt["positive"][year], 3)
         land_use_change_pnt["negative"][year] = round(land_use_change_pnt["negative"][year], 3)
@@ -357,13 +357,14 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     idx = 0
     for year in range(start_year, year_range[-1] + 1):
         land_use_change_prediction[year] = {}
+        land_use_change_prediction[year]["landUseChange"] = {}
         factor_type = "cropland_to_forestland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL25.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -383,7 +384,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL30.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL205.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -407,11 +408,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "grassland_to_forestland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL31.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -431,7 +432,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL36.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL205.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -455,11 +456,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "wetland_to_forestland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL37.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -479,7 +480,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL42.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL205.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -503,11 +504,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "settlement_to_forestland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL43.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -527,7 +528,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL48.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL205.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -551,11 +552,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "otherland_to_forestland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL49.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -575,7 +576,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL54.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL205.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -599,11 +600,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "forestland_to_cropland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 1:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL55.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -623,7 +624,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL60.to_numpy()[0] *
                         (- 44 / 12))
             elif 2 <= idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["mineral"][factor_type] *
                         country_data.CSC_COL59.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -631,7 +632,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL60.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL211.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -655,11 +656,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "grassland_to_cropland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL61.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -679,7 +680,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL66.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL211.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -703,11 +704,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "wetland_to_cropland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL67.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -727,7 +728,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL72.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL211.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -751,11 +752,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "settlement_to_cropland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL73.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -775,7 +776,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL78.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL211.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -799,11 +800,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "otherland_to_cropland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL79.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -823,7 +824,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL84.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL211.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -847,11 +848,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "forestland_to_grassland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 1:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL85.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -871,7 +872,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL90.to_numpy()[0] *
                         (- 44 / 12))
             elif 2 <= idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["mineral"][factor_type] *
                         country_data.CSC_COL89.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -879,7 +880,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL90.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL217.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -903,11 +904,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "cropland_to_grassland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL91.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -927,7 +928,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL96.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL217.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -951,11 +952,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "wetland_to_grassland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL97.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -975,7 +976,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL102.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL217.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -999,11 +1000,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "settlement_to_grassland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL103.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1023,7 +1024,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL108.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL217.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1047,11 +1048,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "otherland_to_grassland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL109.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1071,7 +1072,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL114.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL217.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1095,11 +1096,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "forestland_to_wetland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 5:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL115.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1119,7 +1120,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL120.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL223.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1143,9 +1144,9 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "cropland_to_wetland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
-            land_use_change_prediction[year][factor_type] = (
+            land_use_change_prediction[year]["landUseChange"][factor_type] = (
                     land_use_change_dict["total_area"][factor_type] *
                     country_data.CSC_COL121.to_numpy()[0] *
                     (- 44 / 12)) + (
@@ -1169,11 +1170,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "grassland_to_wetland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL127.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1193,7 +1194,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL132.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL229.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1217,11 +1218,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "land_to_peat_extraction"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL133.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1241,7 +1242,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL138.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL229.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1265,11 +1266,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "peatland_restoration"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL139.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1289,7 +1290,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL144.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL229.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1313,11 +1314,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "forestland_to_settlement"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 1:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL145.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1337,7 +1338,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL150.to_numpy()[0] *
                         (- 44 / 12))
             elif 2 <= idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["mineral"][factor_type] *
                         country_data.CSC_COL149.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1345,7 +1346,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL150.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL235.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1369,11 +1370,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "cropland_to_settlement"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL151.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1393,7 +1394,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL156.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL235.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1417,11 +1418,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "grassland_to_settlement"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL157.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1441,7 +1442,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL162.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL235.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1465,11 +1466,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "wetland_to_settlement"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL163.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1489,7 +1490,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL168.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL235.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1513,11 +1514,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "otherland_to_settlement"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL169.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1537,7 +1538,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL174.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL235.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1561,11 +1562,11 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "forestland_to_otherland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 1:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL175.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1585,7 +1586,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL180.to_numpy()[0] *
                         (- 44 / 12))
             elif 2 <= idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["mineral"][factor_type] *
                         country_data.CSC_COL179.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1593,17 +1594,17 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL180.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = 0.0
+                land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
 
     idx = 0
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "cropland_to_otherland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL181.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1623,17 +1624,17 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL186.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = 0.0
+                land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
 
     idx = 0
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "grassland_to_otherland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL187.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1653,17 +1654,17 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL192.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = 0.0
+                land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
 
     idx = 0
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "wetland_to_otherland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL193.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1683,17 +1684,17 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL198.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = 0.0
+                land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
 
     idx = 0
     for year in range(start_year, year_range[-1] + 1):
         factor_type = "settlement_to_otherland"
         if year < policy_start_years[factor_type]:
-            land_use_change_prediction[year][factor_type] = 0.0
+            land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
         else:
             idx += 1
             if idx <= 20:
-                land_use_change_prediction[year][factor_type] = (
+                land_use_change_prediction[year]["landUseChange"][factor_type] = (
                         land_use_change_dict["total_area"][factor_type] *
                         country_data.CSC_COL199.to_numpy()[0] *
                         (- 44 / 12)) + (
@@ -1713,7 +1714,7 @@ def calculate_land_use_change(policy_start_years, land_use_change_dict,
                         country_data.CSC_COL204.to_numpy()[0] *
                         (- 44 / 12))
             else:
-                land_use_change_prediction[year][factor_type] = 0.0
+                land_use_change_prediction[year]["landUseChange"][factor_type] = 0.0
 
     return land_use_change_prediction
 
@@ -1725,15 +1726,15 @@ def calculate_land_use_change_pnt(land_use_change_prediction):
         land_use_change_pnt["positive"][year] = 0
         land_use_change_pnt["negative"][year] = 0
 
-        for factor_type in land_use_change_prediction[year].keys():
-            if land_use_change_prediction[year][factor_type] > 0:
+        for factor_type in land_use_change_prediction[year]["landUseChange"].keys():
+            if land_use_change_prediction[year]["landUseChange"][factor_type] > 0:
                 land_use_change_pnt["positive"][year] = \
                     land_use_change_pnt["positive"][year] + \
-                    land_use_change_prediction[year][factor_type]
+                    land_use_change_prediction[year]["landUseChange"][factor_type]
             else:
                 land_use_change_pnt["negative"][year] = \
                     land_use_change_pnt["negative"][year] + \
-                    land_use_change_prediction[year][factor_type]
+                    land_use_change_prediction[year]["landUseChange"][factor_type]
 
     for year in land_use_change_prediction.keys():
         land_use_change_pnt["total"][year] = 0
