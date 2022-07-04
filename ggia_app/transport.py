@@ -92,9 +92,11 @@ def route_new_development():
     if "message" in baseline_response:
         return {"status": "invalid", "messages": baseline_response["message"]}
 
-    _, _, _, new_development_response = calculate_new_development(
+    _, _, modal_split_u2, new_development_response = calculate_new_development(
         baseline, baseline_response["projections"], baseline_v, new_development
     )
+
+    modal_split_percentage = calculate_modal_split_percentage(selected_year, modal_split_u2)
 
     # if "message" in new_development_response:
     #     return {"status": "invalid", "messages": new_development_response["message"]}
@@ -138,6 +140,7 @@ def route_new_development():
         "data": {
             "baseline": baseline_response,
             "new_development": new_development_response,
+            "modal_split_percentage": modal_split_percentage
         },
     }
 
@@ -1992,6 +1995,66 @@ def calculate_new_baseline_emissions(
                 new_baseline_emissions[transport_type][year] = 0.0
 
     return modal_split_u2, new_baseline_emissions
+
+
+def calculate_modal_split_percentage(selected_year, modal_split_u2):
+    modal_split_percentage = {}
+
+    modal_split_percentage["passenger_transport"] = {}
+    passenger_transport_modes = ["bus", "car", "metro", "tram", "train"]
+
+    for year in modal_split_u2["bus"].keys():
+        total_pt = 0
+        if year >= selected_year:
+            modal_split_percentage["passenger_transport"][year] = {}
+            total_pt = modal_split_u2["bus"][year] + \
+                       modal_split_u2["car"][year] + \
+                       modal_split_u2["metro"][year] + \
+                       modal_split_u2["tram"][year] + \
+                       modal_split_u2["train"][year]
+
+            if total_pt == 0:
+                modal_split_percentage["passenger_transport"][year]["bus"] = 0.0
+                modal_split_percentage["passenger_transport"][year]["car"] = 0.0
+                modal_split_percentage["passenger_transport"][year]["metro"] = 0.0
+                modal_split_percentage["passenger_transport"][year]["tram"] = 0.0
+                modal_split_percentage["passenger_transport"][year]["train"] = 0.0
+            else:
+                modal_split_percentage["passenger_transport"][year]["bus"] = round(
+                    modal_split_u2["bus"][year] / total_pt * 100, 3)
+                modal_split_percentage["passenger_transport"][year]["car"] = round(
+                    modal_split_u2["car"][year] / total_pt * 100, 3)
+                modal_split_percentage["passenger_transport"][year]["metro"] = round(
+                    modal_split_u2["metro"][year] / total_pt * 100, 3)
+                modal_split_percentage["passenger_transport"][year]["tram"] = round(
+                    modal_split_u2["tram"][year] / total_pt * 100, 3)
+                modal_split_percentage["passenger_transport"][year]["train"] = round(
+                    modal_split_u2["train"][year] / total_pt * 100, 3)
+
+    modal_split_percentage["freight_transport"] = {}
+    freight_transport_modes = ["rail_transport", "road_transport", "waterways_transport"]
+
+    for year in modal_split_u2["rail_transport"].keys():
+        total_ft = 0
+        if year >= selected_year:
+            modal_split_percentage["freight_transport"][year] = {}
+            total_ft = modal_split_u2["rail_transport"][year] + \
+                       modal_split_u2["road_transport"][year] + \
+                       modal_split_u2["waterways_transport"][year]
+
+            if total_ft == 0:
+                modal_split_percentage["freight_transport"][year]["rail_transport"] = 0.0
+                modal_split_percentage["freight_transport"][year]["road_transport"] = 0.0
+                modal_split_percentage["freight_transport"][year]["waterways_transport"] = 0.0
+            else:
+                modal_split_percentage["freight_transport"][year]["rail_transport"] = round(
+                    modal_split_u2["rail_transport"][year] / total_ft * 100, 3)
+                modal_split_percentage["freight_transport"][year]["road_transport"] = round(
+                    modal_split_u2["road_transport"][year] / total_ft * 100, 3)
+                modal_split_percentage["freight_transport"][year]["waterways_transport"] = round(
+                    modal_split_u2["waterways_transport"][year] / total_ft * 100, 3)
+
+    return modal_split_percentage
 
 
 # NEW DEVELOPMENT - U3 & ONWARD ########################################
