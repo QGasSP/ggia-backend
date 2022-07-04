@@ -92,7 +92,13 @@ def route_new_development():
     if "message" in baseline_response:
         return {"status": "invalid", "messages": baseline_response["message"]}
 
-    _, _, modal_split_u2, new_development_response = calculate_new_development(
+    (
+        _, _, modal_split_u2,
+        bus_propulsion_share,
+        car_propulsion_share,
+        grid_electricity_emission_factor,
+        new_development_response
+    ) = calculate_new_development(
         baseline, baseline_response["projections"], baseline_v, new_development
     )
 
@@ -135,12 +141,30 @@ def route_new_development():
                     year, None
                 )
 
+    for year in list(grid_electricity_emission_factor.keys()):
+        for propulsion_type in bus_propulsion_share[year].keys():
+            bus_propulsion_share[year][propulsion_type] = round(
+                bus_propulsion_share[year][propulsion_type], 3)
+
+        for propulsion_type in car_propulsion_share[year].keys():
+            car_propulsion_share[year][propulsion_type] = round(
+                car_propulsion_share[year][propulsion_type], 3)
+
+        grid_electricity_emission_factor[year] = round(grid_electricity_emission_factor[year], 3)
+        if year < selected_year:
+            bus_propulsion_share.pop(year, None)
+            car_propulsion_share.pop(year, None)
+            grid_electricity_emission_factor.pop(year, None)
+
     return {
         "status": "success",
         "data": {
             "baseline": baseline_response,
             "new_development": new_development_response,
-            "modal_split_percentage": modal_split_percentage
+            "modal_split_percentage": modal_split_percentage,
+            "bus_propulsion_share": bus_propulsion_share,
+            "car_propulsion_share": car_propulsion_share,
+            "transport_electricity_consumption": grid_electricity_emission_factor
         },
     }
 
@@ -170,6 +194,9 @@ def route_transport():
         adjusted_settlement_distribution_by_year,
         weighted_cf_by_transport_year,
         modal_split_u2,
+        bus_propulsion_share,
+        car_propulsion_share,
+        grid_electricity_emission_factor,
         new_development_response,
     ) = calculate_new_development(
         baseline, baseline_response["projections"], baseline_v, new_development
@@ -576,7 +603,7 @@ def calculate_baseline_emissions(
             correction_factor,
         )
         if transport_type == "bus":
-            baseline_emissions[transport_type] = calculate_baseline_emissions_bus(
+            _, baseline_emissions[transport_type] = calculate_baseline_emissions_bus(
                 country_data,
                 settlement_distribution_by_year,
                 grid_electricity_emission_factor,
@@ -584,7 +611,7 @@ def calculate_baseline_emissions(
             )
 
         elif transport_type == "car":
-            baseline_emissions[transport_type] = calculate_baseline_emissions_car(
+            _, baseline_emissions[transport_type] = calculate_baseline_emissions_car(
                 country_data,
                 settlement_distribution_by_year,
                 baseline_v[transport_type],
@@ -1125,7 +1152,7 @@ def calculate_baseline_emissions_bus(
             baseline_v[year] * area_specific_ef_average[year] / 1000
         )
 
-    return baseline_emissions_bus
+    return propulsion_share, baseline_emissions_bus
 
 
 def calculate_baseline_emissions_car(
@@ -1286,7 +1313,7 @@ def calculate_baseline_emissions_car(
             baseline_v[year] * area_specific_ef_average[year] / 1000
         )
 
-    return baseline_emissions_car
+    return propulsion_share, baseline_emissions_car
 
 
 def calculate_baseline_emissions_metro(
@@ -1652,7 +1679,12 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
         new_correction_factors,
     )
 
-    modal_split_u2, new_baseline_emissions = calculate_new_baseline_emissions(
+    modal_split_u2, \
+    bus_propulsion_share, \
+    car_propulsion_share, \
+    grid_electricity_emission_factor, \
+    new_baseline_emissions = \
+        calculate_new_baseline_emissions(
         year_range,
         baseline_v,
         country_data,
@@ -1716,6 +1748,9 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
         adjusted_settlement_distribution_by_year,
         weighted_cf_by_transport_year,
         modal_split_u2,
+        bus_propulsion_share,
+        car_propulsion_share,
+        grid_electricity_emission_factor,
         {
             "impact": {
                 "new_residents": new_residents_by_year,
@@ -1927,7 +1962,8 @@ def calculate_new_baseline_emissions(
 
     for transport_type in old_correction_factors.keys():
         if transport_type == "bus":
-            new_baseline_emissions[transport_type] = calculate_baseline_emissions_bus(
+            bus_propulsion_share, new_baseline_emissions[transport_type] = \
+                calculate_baseline_emissions_bus(
                 country_data,
                 adjusted_settlement_distribution_by_year,
                 grid_electricity_emission_factor,
@@ -1935,7 +1971,8 @@ def calculate_new_baseline_emissions(
             )
 
         elif transport_type == "car":
-            new_baseline_emissions[transport_type] = calculate_baseline_emissions_car(
+            car_propulsion_share, new_baseline_emissions[transport_type] = \
+                calculate_baseline_emissions_car(
                 country_data,
                 adjusted_settlement_distribution_by_year,
                 baseline_v[transport_type],
@@ -1994,7 +2031,11 @@ def calculate_new_baseline_emissions(
             if math.isnan(new_baseline_emissions[transport_type][year]):
                 new_baseline_emissions[transport_type][year] = 0.0
 
-    return modal_split_u2, new_baseline_emissions
+    return modal_split_u2, \
+           bus_propulsion_share, \
+           car_propulsion_share, \
+           grid_electricity_emission_factor, \
+           new_baseline_emissions
 
 
 def calculate_modal_split_percentage(selected_year, modal_split_u2):
