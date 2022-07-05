@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   # ggia-postgres:
-  #   container_name: "ggia-db"
+  #   container_name: "ggia-db-dev"
   #   image: docker.io/bitnami/postgresql:11
   #   volumes:
   #     - 'postgresql_data:/bitnami/postgresql'
@@ -13,7 +13,7 @@ services:
   #   restart: always
 
   ggia-backend:
-    container_name: "ggia-backend"
+    container_name: "ggia-backend-dev"
     build:
       context: .
     ports:
