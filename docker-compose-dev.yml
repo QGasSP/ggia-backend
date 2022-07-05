@@ -12,14 +12,14 @@ services:
   #     - POSTGRESQL_DATABASE=ggia-backend
   #   restart: always
 
-  ggia-backend:
+  ggia-backend-dev:
     container_name: "ggia-backend-dev"
     build:
       context: .
     ports:
       - "8001:8000"
     # depends_on:
-    #   - ggia-postgres
+    #   - ggia-postgres-dev
     restart: on-failure
 
 # volumes:
