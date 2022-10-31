@@ -39,9 +39,9 @@ def save_local_dataset(local_dataset):
 
     # Get current date and time
     now = datetime.now()
-    date_time = now.strftime("%d_%m_%Y__%H_%M")
+    date_time = now.strftime("%d_%m_%Y@%H__%M")
 
-    csv_file_name = local_dataset["dataset_name"] + "_" + date_time + ".csv"
+    csv_file_name = local_dataset["dataset_name"] + "-" + date_time + ".csv"
 
     csv_file_path = os.path.join("CSVfiles", "local_datasets", csv_file_name)
     

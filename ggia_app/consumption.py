@@ -1676,7 +1676,11 @@ def route_datasets():
     """
     FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
     for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
-        os.path.splitext(os.path.basename(file))[0]
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+        datasets.append(file_name)
 
     return {
         "status": "success",
