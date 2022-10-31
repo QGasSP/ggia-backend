@@ -52,6 +52,7 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from flask import Blueprint
 from flask import request
 import humps
@@ -1670,6 +1671,13 @@ def route_datasets():
     datasets = [] 
     for key in  Y_VECTORS_LOCAL.keys():
         datasets.append(key)
+
+    """
+    custom code for loading local dataset file names
+    """
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        datasets.append(Path(file).stem)
 
     return {
         "status": "success",

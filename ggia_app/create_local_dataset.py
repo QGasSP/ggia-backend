@@ -31,9 +31,8 @@ def route_create_local_dataset():
 
     save_status = save_local_dataset(local_dataset_request)
 
-    print("!!Here!!")
+    return {"status": save_status}
 
-    return {"status": "success"}
 
 def save_local_dataset(local_dataset):
     save_status = "invalid"
@@ -83,5 +82,7 @@ def save_local_dataset(local_dataset):
     # This is done so no empty csv files are stored to disk 
     if local_dataset_df.empty:
         os.remove(data_file)
+    else:
+        save_status = "success"
 
     return save_status

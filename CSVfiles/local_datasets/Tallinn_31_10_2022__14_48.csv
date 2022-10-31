@@ -1,5 +1,6 @@
 VariableName,Value,VariableAcronym
 dataset_name,Tallinn,country
+dataset_description,Copy of Estonia,description
 annual_change_population__2021_30,-0.6,POP_COL1
 annual_change_population__2031_40,-0.3,POP_COL2
 annual_change_population__2041_50,-0.3,POP_COL3
@@ -1009,4 +1010,3 @@ ec_new_building_warehouses__peat,0,BUI_COL409
 ec_new_building_warehouses__wood,0,BUI_COL410
 ec_new_building_warehouses__renewable,6,BUI_COL411
 ec_new_building_warehouses__heat,44,BUI_COL412
-dataset_description,,description
