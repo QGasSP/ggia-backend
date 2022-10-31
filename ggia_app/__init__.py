@@ -4,6 +4,7 @@ from flask_cors import CORS
 import os
 
 from ggia_app import importer, countries
+import ggia_app.create_local_dataset as create_local_dataset
 import ggia_app.transport as transport
 import ggia_app.land_use_change as land_use_change
 import ggia_app.consumption as consumption
@@ -42,6 +43,7 @@ def create_app(test_config=None):
     app.register_blueprint(transport.blue_print)
     app.register_blueprint(importer.blue_print)
     app.register_blueprint(countries.blue_print)
+    app.register_blueprint(create_local_dataset.blue_print)
     app.register_blueprint(land_use_change.blue_print)
     app.register_blueprint(buildings.blue_print)
     app.register_blueprint(consumption.blue_print)
