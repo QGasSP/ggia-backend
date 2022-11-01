@@ -1,5 +1,7 @@
 import pandas as pd
 import math
+import glob
+import os
 
 from flask import Blueprint
 from flask import request
@@ -269,6 +271,37 @@ def route_transport():
     }
 
 
+# CHECK & LOAD LOCAL DATASET ########################################
+
+def check_local_data(country):
+    country_data = pd.DataFrame()
+
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+
+        if country == file_name:
+            df = pd.read_csv(file)
+            sub_df = df[["VariableAcronym", "Value"]].T
+            sub_df.columns = sub_df.iloc[0]
+            sub_df = sub_df.drop(["VariableAcronym"])
+
+            # Change data types to correct type          
+            local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+            for i in range(len(local_dataset_format)):
+                if local_dataset_format["VariableType"][i] == "Float":
+                    sub_df[local_dataset_format["VariableAcronym"][i]] = sub_df[local_dataset_format["VariableAcronym"][i]].astype(float)
+
+            sub_df.fillna(0, inplace=True)
+
+            country_data = sub_df
+    
+    return country_data
+
+
 # METRO TRAM LIST ########################################
 
 
@@ -284,6 +317,13 @@ def generate_metro_tram_list(metro_tram_request):
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
+
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
 
     metro_min_col_idx = 7
     metro_col_count = 7
@@ -337,6 +377,13 @@ def calculate_baseline(baseline):
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
+
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
 
     grid_electricity_emission_factor = calculate_grid_electricity_emission_factor(
         year_range, country_data
@@ -1620,6 +1667,13 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
 
     country_data = df.loc[df["country"] == country]
 
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
+
     new_residents_by_year = calculate_residents_after_new_development(
         year_range, country_data, new_residents, year_start, year_finish
     )
@@ -2124,6 +2178,13 @@ def calculate_policy_quantification(
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
+
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
 
     # U3.1 ########################################
     passenger_mobility = policy_quantification["passenger_mobility"]

@@ -1,6 +1,8 @@
 import pandas as pd
 import datetime
 import math
+import glob
+import os
 
 from flask import Blueprint
 from flask import request
@@ -117,6 +119,37 @@ class LandUseChange(Schema):
     policy_start_year = fields.Dict(required=True, keys=fields.Str(), values=fields.Integer())
 
 
+# CHECK & LOAD LOCAL DATASET ########################################
+
+def check_local_data(country):
+    country_data = pd.DataFrame()
+
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+
+        if country == file_name:
+            df = pd.read_csv(file)
+            sub_df = df[["VariableAcronym", "Value"]].T
+            sub_df.columns = sub_df.iloc[0]
+            sub_df = sub_df.drop(["VariableAcronym"])
+
+            # Change data types to correct type          
+            local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+            for i in range(len(local_dataset_format)):
+                if local_dataset_format["VariableType"][i] == "Float":
+                    sub_df[local_dataset_format["VariableAcronym"][i]] = sub_df[local_dataset_format["VariableAcronym"][i]].astype(float)
+
+            sub_df.fillna(0, inplace=True)
+
+            country_data = sub_df
+    
+    return country_data
+
+
 # CALCULATE BASE DATA ########################################
 
 def calculate_population(country, start_year, start_population):
@@ -128,6 +161,13 @@ def calculate_population(country, start_year, start_population):
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
+
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
 
     if start_year == 2021:
         # Initializing value for 2021
@@ -169,6 +209,13 @@ def calculate_land_use_baseline(country, start_year, year_range, land_use_catego
     df.fillna(0, inplace=True)
 
     country_data = df.loc[df["country"] == country]
+
+    if country_data.empty:
+        country_data = check_local_data(country)
+    
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country data not found."}
 
     for land_use_type in land_use_categories:
         land_use_baseline[land_use_type] = {}
