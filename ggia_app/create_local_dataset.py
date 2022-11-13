@@ -2,6 +2,7 @@ from threading import local
 import pandas as pd
 import os
 import csv
+import glob
 from datetime import datetime
 # import math
 
@@ -13,15 +14,15 @@ from ggia_app.local_dataset_schema import *
 # from ggia_app.env import *
 import humps
 
-blue_print = Blueprint("create-local-dataset", __name__, url_prefix="/api/v1/create/local-dataset")
+blue_print = Blueprint("export-local-dataset", __name__, url_prefix="/api/v1/local-dataset")
 
 
 # ROUTES ########################################
 
-@blue_print.route("", methods=["GET", "POST"])
-def route_create_local_dataset():
+@blue_print.route("export", methods=["GET", "POST"])
+def route_export_local_dataset():
     request_body = humps.decamelize(request.json)
-    local_dataset_request_schema = LocalDataset()
+    local_dataset_request_schema = ExportLocalDataset()
     local_dataset_request = request_body.get("local_dataset", -1)
 
     try:
@@ -29,12 +30,33 @@ def route_create_local_dataset():
     except ValidationError as err:
         return {"status": "invalid", "messages": err.messages}, 400
 
-    save_status = save_local_dataset(local_dataset_request)
+    save_status = export_local_dataset(local_dataset_request)
 
     return {"status": save_status}
 
 
-def save_local_dataset(local_dataset):
+@blue_print.route("import", methods=["GET", "POST"])
+def route_import_local_dataset():
+    request_body = humps.decamelize(request.json)
+    local_dataset_request_schema = ImportLocalDataset()
+    local_dataset_request = request_body.get("local_dataset", -1)
+
+    try:
+        local_dataset_request_schema.load(local_dataset_request)
+    except ValidationError as err:
+        return {"status": "invalid", "messages": err.messages}, 400
+
+    load_status, load_data = import_dataset(local_dataset_request)
+
+    return {
+        "status": load_status,
+        "data": load_data
+    }
+
+
+# FUNCTIONS ########################################
+
+def export_local_dataset(local_dataset):
     save_status = "invalid"
 
     # Get current date and time
@@ -86,3 +108,92 @@ def save_local_dataset(local_dataset):
         save_status = "success"
 
     return save_status
+
+
+def import_dataset(local_dataset):
+    load_status = "invalid"
+    load_data = {}
+    data_points_found = 0
+
+    country = local_dataset["dataset_name"]
+
+    df_Transport = pd.read_csv(
+        "CSVfiles/Transport_full_dataset.csv", skiprows=7
+    )  # Skipping first 7 lines to ensure headers are correct
+    df_Transport.fillna(0, inplace=True)
+
+    country_data = df_Transport.loc[df_Transport["country"] == country]
+
+    if country_data.empty:
+        # Imports local dataset into dataframe
+        country_data = check_local_data(country)
+    else:
+        # Imports remaining country data into dataframe
+        df_Land_use = pd.read_csv(
+            "CSVfiles/Land_use_full_dataset.csv", skiprows=7
+        )  # Skipping first 7 lines to ensure headers are correct
+        df_Land_use.fillna(0, inplace=True)
+        country_data_LU = df_Land_use.loc[df_Land_use["country"] == country]
+
+        # Merge the dataframes from with transport and land use data
+        cols_to_use = country_data_LU.columns.difference(country_data.columns)
+        country_data = country_data.merge(country_data_LU[cols_to_use], left_index=True, right_index=True, how="outer")
+
+        df_Buildings = pd.read_csv('CSVfiles/buildings.csv')
+        df_Buildings.fillna(0, inplace=True)
+        country_data_B = df_Buildings.loc[df_Buildings["country"] == country]
+
+        # Merge the dataframes from with transport + land use data and buildings
+        cols_to_use = country_data_B.columns.difference(country_data.columns)
+        country_data = country_data.merge(country_data_B[cols_to_use], left_index=True, right_index=True, how="outer")
+
+    # Checks dataframe with imported data
+    # and structures data into correct format for frontend
+    local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+    country_data_output = {}
+    for i in range(len(local_dataset_format)):
+        if local_dataset_format["VariableAcronym"][i] in country_data.keys():
+            country_data_output[local_dataset_format["VariableName"][i]] = country_data[local_dataset_format["VariableAcronym"][i]].values[0]
+        else:
+            if local_dataset_format["VariableType"][i] == "String":
+                country_data_output[local_dataset_format["VariableName"][i]] = ""
+            else:
+                country_data_output[local_dataset_format["VariableName"][i]] = 0.0
+
+    if country_data.empty:
+        return {"status": "invalid", "messages": "Country/Local-data not found!"}, 400
+    else:
+        load_status = "success"
+        return load_status, country_data_output
+
+
+# CHECK & LOAD LOCAL DATASET ########################################
+
+def check_local_data(country):
+    country_data = pd.DataFrame()
+
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+
+        if country == file_name:
+            df = pd.read_csv(file)
+            sub_df = df[["VariableAcronym", "Value"]].T
+            sub_df.columns = sub_df.iloc[0]
+            sub_df = sub_df.drop(["VariableAcronym"])
+
+            # Change data types to correct type          
+            local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+            for i in range(len(local_dataset_format)):
+                if local_dataset_format["VariableType"][i] == "Float":
+                    sub_df[local_dataset_format["VariableAcronym"][i]] = sub_df[local_dataset_format["VariableAcronym"][i]].astype(float)
+
+            sub_df.fillna(0, inplace=True)
+
+            country_data = sub_df
+    
+    return country_data
+

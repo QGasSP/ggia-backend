@@ -117,7 +117,7 @@ electricity_consumption_metro,12,METRO_COL3
 annual_change_metro__2021_30,2.4,METRO_COL4
 annual_change_metro__2031_40,1.2,METRO_COL5
 annual_change_metro__2041_50,1.2,METRO_COL6
-metro__1,Tallinna Transport,METRO_COL7
+metro__1,-,METRO_COL7
 metro__2,-,METRO_COL8
 metro__3,-,METRO_COL9
 metro__4,-,METRO_COL10

@@ -2,7 +2,7 @@ from marshmallow import Schema, fields
 from marshmallow.validate import Range
 
 
-class LocalDataset(Schema):
+class ExportLocalDataset(Schema):
     dataset_name = fields.String(required=True)
     dataset_description = fields.String()
     annual_change_population__2021_30 = fields.Float()
@@ -1014,3 +1014,6 @@ class LocalDataset(Schema):
     ec_new_building_warehouses__wood = fields.Float()
     ec_new_building_warehouses__renewable = fields.Float()
     ec_new_building_warehouses__heat = fields.Float()
+
+class ImportLocalDataset(Schema):
+    dataset_name = fields.String(required=True)
