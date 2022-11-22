@@ -2,6 +2,7 @@ from threading import local
 import pandas as pd
 import os
 import csv
+import json
 import glob
 from datetime import datetime
 # import math
@@ -28,11 +29,15 @@ def route_export_local_dataset():
     try:
         local_dataset_request_schema.load(local_dataset_request)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages["dataset_name"][0]}, 400
 
-    save_status = export_local_dataset(local_dataset_request)
+    save_status, save_message = export_local_dataset(local_dataset_request)
 
-    return {"status": save_status}
+    if save_message:
+        return {"status": save_status,
+        "message": save_message}
+    else:
+        return {"status": save_status}
 
 
 @blue_print.route("import", methods=["GET", "POST"])
@@ -58,6 +63,19 @@ def route_import_local_dataset():
 
 def export_local_dataset(local_dataset):
     save_status = "invalid"
+    save_message = None
+    
+    config_file = "config.json"
+    config_status = None
+
+    try:
+        config_status = json.load(open(config_file))["save_csv"]
+    except Exception as e:
+        pass
+    
+    if config_status == False:
+        save_message = "System configuration file found."
+        return save_status, save_message
 
     # Get current date and time
     now = datetime.now()
@@ -107,7 +125,7 @@ def export_local_dataset(local_dataset):
     else:
         save_status = "success"
 
-    return save_status
+    return save_status, save_message
 
 
 def import_dataset(local_dataset):
