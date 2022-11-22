@@ -15,7 +15,8 @@ services:
   ggia-backend-dev:
     container_name: "ggia-backend-dev"
     build:
-      context: .
+        context: ./frontend_qgassp
+        dockerfile: Dockerfile-dev
     ports:
       - "8001:8000"
     # depends_on:
@@ -25,4 +26,3 @@ services:
 # volumes:
 #   postgresql_data:
 #     driver: local
-      
