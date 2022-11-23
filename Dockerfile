@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 COPY requirements.txt /
-COPY config.json /
+COPY config.json /config.json
 RUN pip3 install --upgrade pip && pip3 install -r /requirements.txt
 COPY . /app
 # ENV FLASKDEBUG=0
