@@ -17,7 +17,7 @@ services:
   ggia-backend:
     container_name: "ggia-backend"
     build:
-        context: ./frontend_qgassp
+        context: ./
         dockerfile: Dockerfile
     ports:
       - "8000:8000"
