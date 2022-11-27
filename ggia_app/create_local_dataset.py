@@ -157,7 +157,7 @@ def import_dataset(local_dataset):
         cols_to_use = country_data_LU.columns.difference(country_data.columns)
         country_data = country_data.merge(country_data_LU[cols_to_use], left_index=True, right_index=True, how="outer")
 
-        df_Buildings = pd.read_csv('CSVfiles/buildings.csv')
+        df_Buildings = pd.read_csv('CSVfiles/buildings_full_dataset.csv')
         df_Buildings.fillna(0, inplace=True)
         country_data_B = df_Buildings.loc[df_Buildings["country"] == country]
 

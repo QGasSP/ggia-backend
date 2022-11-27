@@ -1,3 +1,6 @@
+import glob
+import os
+
 import pandas as pd
 
 from ggia_app.buildings.utils.emission_factor_calculator import emission_factor
@@ -9,6 +12,36 @@ from .unit7.u73 import u73_emission as u73_emission_calculator
 from .unit8.residential import residential_emission
 from .unit8.commercial import commercial_emission
 from .unit8.change_building_use import building_emission
+
+
+def check_local_data(country):
+    country_data = pd.DataFrame()
+
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+
+        if country == file_name:
+            df = pd.read_csv(file)
+            sub_df = df[["VariableAcronym", "Value"]].T
+            sub_df.columns = sub_df.iloc[0]
+            sub_df = sub_df.drop(["VariableAcronym"])
+
+            # Change data types to correct type
+            local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+            for i in range(len(local_dataset_format)):
+                if local_dataset_format["VariableType"][i] == "Float":
+                    sub_df[local_dataset_format["VariableAcronym"][i]] = sub_df[
+                        local_dataset_format["VariableAcronym"][i]].astype(float)
+
+            sub_df.fillna(0, inplace=True)
+
+            country_data = sub_df
+
+    return country_data
 
 
 def calculate_settlements_emission(
@@ -70,19 +103,30 @@ def calculate_settlements_emission(
 
         policy_residential_list, policy_commercial_list, policy_building_changes_list
 ):
-    df = pd.read_csv('CSVfiles/buildings.csv')
+    df = pd.read_csv('CSVfiles/buildings_full_dataset.csv')
     df.fillna(0, inplace=True)
+
+    country_data = df.loc[df["country"] == country]
+    if country_data.empty:
+        country_data = check_local_data(country)
+
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return None, None, None, {"status": "invalid", "messages": "Country data not found."}
+
     country_map = dict(zip(df.country, df.index))
     country_code = country_map[country]
 
     emission_factors = emission_factor(df, country_code)
     emission_factors_df = pd.DataFrame(emission_factors)
 
-    base_line_emission = calculate_baseline_emission(
+    base_line_emission, error = calculate_baseline_emission(
         start_year, country, apartment_number, terraced_number, semi_detached_number,
         detached_number, retail_area, health_area, hospitality_area, office_area, industrial_area,
         warehouse_area
     )
+    if error:
+        return None, None, None, error
 
     u71_emission = u71_emission_calculator(
         df, country_code, emission_factors_df, start_year,
@@ -184,8 +228,8 @@ def calculate_settlements_emission(
             start_year=start_year,
             selected_residential_unit=u81_input['unit_type'],
             Number_of_units=u81_input['number_of_units'],
-            before=u81_input['energy_use_before'], after=u81_input['energy_use_after'], 
-            unit_renewables_percent=u81_input['renewable_energy_percent'], 
+            before=u81_input['energy_use_before'], after=u81_input['energy_use_after'],
+            unit_renewables_percent=u81_input['renewable_energy_percent'],
             unit_completed_from=u81_input['start_year'], unit_completed_to=u81_input['end_year']
         )
         if u81_input['unit_type'] == 'Apartment':
@@ -296,4 +340,4 @@ def calculate_settlements_emission(
         yearly['Total'] = sum(yearly[unit] for unit in units)
         U78_graph[y] = yearly
 
-    return U78_table_residential, U78_table_commercial, U78_graph
+    return U78_table_residential, U78_table_commercial, U78_graph, None
