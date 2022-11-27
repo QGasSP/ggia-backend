@@ -1,3 +1,5 @@
+import glob
+import os
 from collections import defaultdict
 
 import pandas as pd
@@ -17,13 +19,52 @@ from .warehouse import warehouse_emission_calculator
 energy_carriers = ['Electricity', 'Gas', 'Oil', 'Coal', 'Peat', 'Wood', 'Renewable', 'Heat']
 
 
+def check_local_data(country):
+    country_data = pd.DataFrame()
+
+    FULL_CSV_PATH_LOCAL = os.path.join("CSVfiles", "local_datasets", "")
+    for file in glob.glob(FULL_CSV_PATH_LOCAL + "*.csv"):
+        file_name = os.path.splitext(os.path.basename(file))[0]
+        file_name = file_name.replace("-", ": ")
+        file_name = file_name.replace("__", ":")
+        file_name = file_name.replace("_", ".")
+
+        if country == file_name:
+            df = pd.read_csv(file)
+            sub_df = df[["VariableAcronym", "Value"]].T
+            sub_df.columns = sub_df.iloc[0]
+            sub_df = sub_df.drop(["VariableAcronym"])
+
+            # Change data types to correct type
+            local_dataset_format = pd.read_csv("CSVfiles/local_dataset_format.csv")
+            for i in range(len(local_dataset_format)):
+                if local_dataset_format["VariableType"][i] == "Float":
+                    sub_df[local_dataset_format["VariableAcronym"][i]] = sub_df[
+                        local_dataset_format["VariableAcronym"][i]].astype(float)
+
+            sub_df.fillna(0, inplace=True)
+
+            country_data = sub_df
+
+    return country_data
+
+
 def calculate_baseline_emission(
         start_year, country, apartment_number, terraced_number, semi_detached_number,
         detached_number, retail_area, health_area, hospitality_area, office_area, industrial_area,
         warehouse_area
 ):
-    df = pd.read_csv('CSVfiles/buildings.csv')
+    df = pd.read_csv('CSVfiles/buildings_full_dataset.csv')
     df.fillna(0, inplace=True)
+
+    country_data = df.loc[df["country"] == country]
+    if country_data.empty:
+        country_data = check_local_data(country)
+
+    # Check if country data is still empty after checking local
+    if country_data.empty:
+        return None, {"status": "invalid", "messages": "Country data not found."}
+
     country_map = dict(zip(df.country, df.index))
     country_code = country_map[country]
 
@@ -64,7 +105,7 @@ def calculate_baseline_emission(
         apartment_emission, terraced_emission, semi_detach_emission, detach_emission,
         retail_emission, health_emission, hospitality_emission, office_emission,
         industrial_emission, warehouse_emission
-    )
+    ), None
 
 
 def baseline_emission_graph(
@@ -72,11 +113,13 @@ def baseline_emission_graph(
         detached_number, retail_area, health_area, hospitality_area, office_area, industrial_area,
         warehouse_area
 ):
-    base_line_emission = calculate_baseline_emission(
+    base_line_emission, err = calculate_baseline_emission(
         start_year, country,
         apartment_number, terraced_number, semi_detached_number, detached_number, retail_area,
         health_area, hospitality_area, office_area, industrial_area, warehouse_area
     )
+    if err:
+        return None, None, None, err
 
     apartment_emission, terraced_emission, semi_detach_emission, detach_emission, \
     retail_emission, health_emission, hospitality_emission, office_emission, industrial_emission, \
@@ -109,4 +152,4 @@ def baseline_emission_graph(
     for unit, data_frame in zip(units, data_frames):
         for year, total in data_frame.sum(numeric_only=True, axis=0).to_dict().items():
             result[year].update({unit: total})
-    return residential_table, commercial_table, result
+    return residential_table, commercial_table, result, None
