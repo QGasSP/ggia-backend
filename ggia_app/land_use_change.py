@@ -28,7 +28,7 @@ def route_land_use_change():
     try:
         land_use_change_schema.load(request_body)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages}, 400
 
     country = request_body["country"]
     if "year" in request_body.keys():
@@ -48,6 +48,12 @@ def route_land_use_change():
         start_year = 2050
 
     population_by_year = calculate_population(country, start_year, start_population)
+
+    if "message" in population_by_year:
+         return {
+            "status": population_by_year["status"],
+            "message": population_by_year["message"]
+         }
 
     year_range = list(range(2021, 2051))
 
@@ -155,6 +161,12 @@ def check_local_data(country):
 def calculate_population(country, start_year, start_population):
     population = {}
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Transport_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -167,7 +179,7 @@ def calculate_population(country, start_year, start_population):
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     if start_year == 2021:
         # Initializing value for 2021
@@ -203,6 +215,12 @@ def calculate_population(country, start_year, start_population):
 def calculate_land_use_baseline(country, start_year, year_range, land_use_categories):
     land_use_baseline = {}
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Land_use_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -215,7 +233,7 @@ def calculate_land_use_baseline(country, start_year, year_range, land_use_catego
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     for land_use_type in land_use_categories:
         land_use_baseline[land_use_type] = {}
