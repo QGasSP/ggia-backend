@@ -33,9 +33,12 @@ def route_export_local_dataset():
 
     save_status, save_message = export_local_dataset(local_dataset_request)
 
-    if save_message:
+    if type(save_message) is str:
         return {"status": save_status,
         "message": save_message}
+    elif type(save_message) is dict:
+        return {"status": save_status,
+        "local_data": save_message}
     else:
         return {"status": save_status}
 
@@ -124,6 +127,7 @@ def export_local_dataset(local_dataset):
         os.remove(data_file)
     else:
         save_status = "success"
+        save_message = local_dataset_df.to_dict()
 
     return save_status, save_message
 
