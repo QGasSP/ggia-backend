@@ -24,7 +24,7 @@ def post_buildings_baseline():
     residential = request_body['baseline']['residential']
     commercial = request_body['baseline']['commercial']
 
-    residential_table, commercial_table, result = baseline_emission_graph(
+    residential_table, commercial_table, result, error = baseline_emission_graph(
         start_year=request_body['year'], country=request_body['country'],
         apartment_number=residential['apartment'], terraced_number=residential['terraced'],
         semi_detached_number=residential['semi_detached'], detached_number=residential['detached'],
@@ -32,6 +32,8 @@ def post_buildings_baseline():
         hospitality_area=commercial['hospitality'], office_area=commercial['offices'],
         industrial_area=commercial['industrial'], warehouse_area=commercial['warehouses'],
     )
+    if error:
+        return error
 
     data = {
         "residential_table": residential_table,
@@ -69,7 +71,7 @@ def post_settlements_and_policy():
     policy_building_changes_list = request_body['policy_quantification'][
         'building_changes'].values()
 
-    settlements_table, policy_table, result = calculate_settlements_emission(
+    settlements_table, policy_table, result, error = calculate_settlements_emission(
         start_year=request_body['year'], country=request_body['country'],
 
         apartment_number=baseline_residential['apartment'],
@@ -215,6 +217,8 @@ def post_settlements_and_policy():
         policy_commercial_list=policy_commercial_list,
         policy_building_changes_list=policy_building_changes_list,
     )
+    if error:
+        return error
 
     data = {
         "settlements_table": settlements_table,
