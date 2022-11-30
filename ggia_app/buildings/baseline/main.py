@@ -57,6 +57,12 @@ def calculate_baseline_emission(
     df = pd.read_csv('CSVfiles/buildings_full_dataset.csv')
     df.fillna(0, inplace=True)
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     country_data = df.loc[df["country"] == country]
     if country_data.empty:
         country_data = check_local_data(country)
@@ -66,7 +72,12 @@ def calculate_baseline_emission(
         return None, {"status": "invalid", "messages": "Country data not found."}
 
     country_map = dict(zip(df.country, df.index))
-    country_code = country_map[country]
+
+    try:
+        country_code = country_map[country]
+    except KeyError as err:
+        df = country_data
+        country_code = 0
 
     emission_factors = emission_factor(df, country_code)
     emission_factors_df = pd.DataFrame(emission_factors)

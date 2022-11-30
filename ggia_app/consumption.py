@@ -374,6 +374,12 @@ class Consumption:
             eff_scaler_initial="normal"
             ):
 
+        # Check if country name contains local-dataset name
+        # If so, removes local-dataset name
+        country_code_separator = " & "
+        if country_code_separator in country:
+            country = country.split(country_code_separator, 1)[0]
+
         self.year = year
         self.policy_year = year  # we want it the same for the baseline
         self.country = country

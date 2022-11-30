@@ -26,9 +26,15 @@ def route_metro_tram_list():
     try:
         metro_tram_request_schema.load(metro_tram_request)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages}, 400
 
     metro_city_list, tram_city_list = generate_metro_tram_list(metro_tram_request)
+
+    if metro_city_list == "status" and tram_city_list == "message":
+        return{
+            "status": "invalid",
+            "message": "Unable to retrieve metro/tram list."
+        }
 
     return {
         "status": "success",
@@ -50,14 +56,17 @@ def route_baseline():
     try:
         baseline_schema.load(baseline)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages}, 400
 
     selected_year = baseline["year"]
 
     _, baseline_response = calculate_baseline(baseline)
 
-    if "message" in baseline_response:
-        return {"status": "invalid", "messages": baseline_response["message"]}
+    if baseline_response == "message":
+        return {"status": "invalid",
+        "message": "Country data not found."}
+    elif "message" in baseline_response:
+        return {"status": "invalid", "message": baseline_response["message"]}
 
     # Removing years prior to selected year - BASELINE
     for ptype in baseline_response["projections"].keys():
@@ -85,14 +94,17 @@ def route_new_development():
         baseline_schema.load(baseline)
         new_development_schema.load(new_development)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages}, 400
 
     selected_year = baseline["year"]
 
     baseline_v, baseline_response = calculate_baseline(baseline)
 
-    if "message" in baseline_response:
-        return {"status": "invalid", "messages": baseline_response["message"]}
+    if baseline_response == "message":
+        return {"status": "invalid",
+        "message": "Country data not found."}
+    elif "message" in baseline_response:
+        return {"status": "invalid", "message": baseline_response["message"]}
 
     (
         _, _, modal_split_u2,
@@ -107,7 +119,7 @@ def route_new_development():
     modal_split_percentage = calculate_modal_split_percentage(selected_year, modal_split_u2)
 
     # if "message" in new_development_response:
-    #     return {"status": "invalid", "messages": new_development_response["message"]}
+    #     return {"status": "invalid", "message": new_development_response["message"]}
 
     # Removing years prior to selected year - BASELINE
     for ptype in baseline_response["projections"].keys():
@@ -179,7 +191,7 @@ def route_transport():
     try:
         request_schema.load(request_body)
     except ValidationError as err:
-        return {"status": "invalid", "messages": err.messages}, 400
+        return {"status": "invalid", "message": err.messages}, 400
 
     baseline = request_body["baseline"]
     new_development = request_body["new_development"]
@@ -189,8 +201,11 @@ def route_transport():
 
     baseline_v, baseline_response = calculate_baseline(baseline)
 
-    if "message" in baseline_response:
-        return {"status": "invalid", "messages": baseline_response["message"]}
+    if baseline_response == "message":
+        return {"status": "invalid",
+        "message": "Country data not found."}
+    elif "message" in baseline_response:
+        return {"status": "invalid", "message": baseline_response["message"]}
 
     (
         adjusted_settlement_distribution_by_year,
@@ -205,7 +220,7 @@ def route_transport():
     )
 
     # if "message" in new_development_response:
-    #     return {"status": "invalid", "messages": new_development_response["message"]}
+    #     return {"status": "invalid", "message": new_development_response["message"]}
 
     (
         absolute_policy_quantification_response,
@@ -224,7 +239,7 @@ def route_transport():
     # if "message" in policy_quantification_response:
     #     return {
     #         "status": "invalid",
-    #         "messages": policy_quantification_response["message"],
+    #         "message": policy_quantification_response["message"],
     #     }
 
     # Removing years prior to selected year - BASELINE
@@ -311,6 +326,12 @@ def generate_metro_tram_list(metro_tram_request):
 
     country = metro_tram_request["country"]
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Transport_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -323,7 +344,7 @@ def generate_metro_tram_list(metro_tram_request):
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     metro_min_col_idx = 7
     metro_col_count = 7
@@ -371,6 +392,12 @@ def calculate_baseline(baseline):
     if year_range[-1] < selected_year:
         return {}, {"message": "Selected year is larger than 2051."}
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Transport_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -383,7 +410,7 @@ def calculate_baseline(baseline):
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     grid_electricity_emission_factor = calculate_grid_electricity_emission_factor(
         year_range, country_data
@@ -1660,6 +1687,12 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
     if year_start < beginning_year:
         year_start = beginning_year
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Transport_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -1672,7 +1705,7 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     new_residents_by_year = calculate_residents_after_new_development(
         year_range, country_data, new_residents, year_start, year_finish
@@ -2172,6 +2205,12 @@ def calculate_policy_quantification(
     new_emissions = new_development_result["impact"]["emissions"]
     new_population = new_development_result["impact"]["population"]
 
+    # Check if country name contains local-dataset name
+    # If so, removes country name
+    country_code_separator = " & "
+    if country_code_separator in country:
+        country = country.split(country_code_separator, 1)[1]
+
     df = pd.read_csv(
         "CSVfiles/Transport_full_dataset.csv", skiprows=7
     )  # Skipping first 7 lines to ensure headers are correct
@@ -2184,7 +2223,7 @@ def calculate_policy_quantification(
     
     # Check if country data is still empty after checking local
     if country_data.empty:
-        return {"status": "invalid", "messages": "Country data not found."}
+        return {"status": "invalid", "message": "Country data not found."}
 
     # U3.1 ########################################
     passenger_mobility = policy_quantification["passenger_mobility"]
