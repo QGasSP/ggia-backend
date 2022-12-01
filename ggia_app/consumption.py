@@ -378,6 +378,7 @@ class Consumption:
         # If so, removes local-dataset name
         country_code_separator = " & "
         if country_code_separator in country:
+            local_dataset_TLB = country.split(country_code_separator, 1)[1]
             country = country.split(country_code_separator, 1)[0]
 
         self.year = year

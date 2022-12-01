@@ -328,20 +328,23 @@ def generate_metro_tram_list(metro_tram_request):
 
     # Check if country name contains local-dataset name
     # If so, removes country name
+    country_ORG = country
     country_code_separator = " & "
     if country_code_separator in country:
         country = country.split(country_code_separator, 1)[1]
 
-    df = pd.read_csv(
-        "CSVfiles/Transport_full_dataset.csv", skiprows=7
-    )  # Skipping first 7 lines to ensure headers are correct
-    df.fillna(0, inplace=True)
-
-    country_data = df.loc[df["country"] == country]
+    country_data = check_local_data(country)
 
     if country_data.empty:
-        country_data = check_local_data(country)
-    
+        if country_code_separator in country_ORG:
+            country = country_ORG.split(country_code_separator, 1)[0]
+        df = pd.read_csv(
+            "CSVfiles/Transport_full_dataset.csv", skiprows=7
+        )  # Skipping first 7 lines to ensure headers are correct
+        df.fillna(0, inplace=True)
+
+        country_data = df.loc[df["country"] == country]
+
     # Check if country data is still empty after checking local
     if country_data.empty:
         return {"status": "invalid", "message": "Country data not found."}
@@ -394,20 +397,23 @@ def calculate_baseline(baseline):
 
     # Check if country name contains local-dataset name
     # If so, removes country name
+    country_ORG = country
     country_code_separator = " & "
     if country_code_separator in country:
         country = country.split(country_code_separator, 1)[1]
 
-    df = pd.read_csv(
-        "CSVfiles/Transport_full_dataset.csv", skiprows=7
-    )  # Skipping first 7 lines to ensure headers are correct
-    df.fillna(0, inplace=True)
-
-    country_data = df.loc[df["country"] == country]
+    country_data = check_local_data(country)
 
     if country_data.empty:
-        country_data = check_local_data(country)
-    
+        if country_code_separator in country_ORG:
+            country = country_ORG.split(country_code_separator, 1)[0]
+        df = pd.read_csv(
+            "CSVfiles/Transport_full_dataset.csv", skiprows=7
+        )  # Skipping first 7 lines to ensure headers are correct
+        df.fillna(0, inplace=True)
+
+        country_data = df.loc[df["country"] == country]
+
     # Check if country data is still empty after checking local
     if country_data.empty:
         return {"status": "invalid", "message": "Country data not found."}
@@ -1689,20 +1695,23 @@ def calculate_new_development(baseline, baseline_result, baseline_v, new_develop
 
     # Check if country name contains local-dataset name
     # If so, removes country name
+    country_ORG = country
     country_code_separator = " & "
     if country_code_separator in country:
         country = country.split(country_code_separator, 1)[1]
 
-    df = pd.read_csv(
-        "CSVfiles/Transport_full_dataset.csv", skiprows=7
-    )  # Skipping first 7 lines to ensure headers are correct
-    df.fillna(0, inplace=True)
-
-    country_data = df.loc[df["country"] == country]
+    country_data = check_local_data(country)
 
     if country_data.empty:
-        country_data = check_local_data(country)
-    
+        if country_code_separator in country_ORG:
+            country = country_ORG.split(country_code_separator, 1)[0]
+        df = pd.read_csv(
+            "CSVfiles/Transport_full_dataset.csv", skiprows=7
+        )  # Skipping first 7 lines to ensure headers are correct
+        df.fillna(0, inplace=True)
+
+        country_data = df.loc[df["country"] == country]
+
     # Check if country data is still empty after checking local
     if country_data.empty:
         return {"status": "invalid", "message": "Country data not found."}
@@ -2207,20 +2216,23 @@ def calculate_policy_quantification(
 
     # Check if country name contains local-dataset name
     # If so, removes country name
+    country_ORG = country
     country_code_separator = " & "
     if country_code_separator in country:
         country = country.split(country_code_separator, 1)[1]
 
-    df = pd.read_csv(
-        "CSVfiles/Transport_full_dataset.csv", skiprows=7
-    )  # Skipping first 7 lines to ensure headers are correct
-    df.fillna(0, inplace=True)
-
-    country_data = df.loc[df["country"] == country]
+    country_data = check_local_data(country)
 
     if country_data.empty:
-        country_data = check_local_data(country)
-    
+        if country_code_separator in country_ORG:
+            country = country_ORG.split(country_code_separator, 1)[0]
+        df = pd.read_csv(
+            "CSVfiles/Transport_full_dataset.csv", skiprows=7
+        )  # Skipping first 7 lines to ensure headers are correct
+        df.fillna(0, inplace=True)
+
+        country_data = df.loc[df["country"] == country]
+
     # Check if country data is still empty after checking local
     if country_data.empty:
         return {"status": "invalid", "message": "Country data not found."}
