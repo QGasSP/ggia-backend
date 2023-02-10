@@ -2,6 +2,8 @@ FROM python:3.9-slim
 COPY requirements.txt /
 COPY config.json /config.json
 RUN pip3 install --upgrade pip && pip3 install -r /requirements.txt
+RUN mkdir -p "/app/CSVfiles/local_datasets"
+VOLUME ["/app/CSVfiles/local_datasets"]
 COPY . /app
 # ENV FLASKDEBUG=0
 WORKDIR /app
